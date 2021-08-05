@@ -1,0 +1,10 @@
+pub type ISBNs = Vec<isbn::Isbn>;
+pub type Titles = Vec<String>;
+pub type Authors = Vec<String>;
+pub type Description = Vec<String>;
+pub type Publishers = Vec<String>;
+pub type PublicationDates = Vec<chrono::NaiveDate>;
+pub type Languages = Vec<String>;
+pub type Tags = Vec<String>;
+pub type Pages = Vec<u16>;
+pub type CoverImages = Vec<String>;
