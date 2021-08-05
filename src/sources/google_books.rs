@@ -16,7 +16,7 @@ pub struct GoogleBooks {
     publisher:        String,
     publication_date: String,
     language:         String,
-    pages:            u16,
+    page_count:       u16,
     tags:             Vec<String>,
     cover_images:     Vec<String>,
 }
@@ -67,9 +67,9 @@ impl GoogleBooks {
         self
     }
 
-    pub fn pages(mut self, pages: u16) -> Self {
-        self.pages = pages;
-        info!("Field `pages` is set to: {:#?}", self.pages);
+    pub fn pages(mut self, page_count: u16) -> Self {
+        self.page_count = page_count;
+        info!("Field `page_count` is set to: {:#?}", self.page_count);
         self
     }
 

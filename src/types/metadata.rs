@@ -34,10 +34,10 @@ pub struct Metadata {
     publication_dates: base::PublicationDates,
     // `languages` refers to the number of languages the book is published in.
     languages:         base::Languages,
-    // `pages` is the number of pages the book has.
+    // `page_count` is the number of pages the book has.
     // A book can have different number of pages depending on the type of book.
     // e.g. paperback, hardcover, e-book (different formats), etc.
-    pages:             base::Pages,
+    page_count:        base::PageCount,
     // `tags` are the book subjects and/or book genre.
     tags:              base::Tags,
     // `cover_images/` is build from a [`Vec`] of URLs of book cover images
@@ -91,9 +91,9 @@ impl Metadata {
         self
     }
 
-    pub fn pages(mut self, pages: base::Pages) -> Self {
-        self.pages = pages;
-        info!("Field `pages` is set to: {:#?}", self.pages);
+    pub fn page_count(mut self, page_count: base::PageCount) -> Self {
+        self.page_count = page_count;
+        info!("Field `page_count` is set to: {:#?}", self.page_count);
         self
     }
 
