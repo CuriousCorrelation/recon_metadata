@@ -201,21 +201,32 @@ impl<'de> Deserialize<'de> for GoogleBooks {
             {
                 let mut isbns = None;
                 let mut title = None;
-                // let mut authors = None;
-                // let mut description = None;
-                // let mut publishers = None;
-                // let mut publication_dates = None;
-                // let mut languages = None;
-                // let mut pages = None;
-                // let mut tags = None;
-                // let mut cover_images = None;
+                let mut authors = None;
+                let mut description = None;
+                let mut publisher = None;
+                let mut publication_date = None;
+                let mut language = None;
+                let mut page_count = None;
+                let mut tags = None;
+                let mut cover_images = None;
 
-                let parse_title = |title: String| Some(title);
-                let parse_isbns = |isbns: Vec<HashMap<String, String>>| {
+                // Helper functions.
+                //
+                // Functions named after fields such as `parse_to_page_count`
+                // are unique function that isn't used by any other field.
+                //
+                // Generic function such as `parse_to_string` are used by multiple fields.
+                let parse_to_string = |string: String| Some(string);
+                let parse_to_page_count = |page_count: u16| Some(page_count);
+                let parse_to_vec_of_string = |vec_of_string: Vec<String>| Some(vec_of_string);
+                let parse_to_cover_images = |cover_images: HashMap<String, String>| {
+                    Some(cover_images.into_iter().map(|(_, v)| v).collect())
+                };
+                let parse_isbns = |mut isbns: Vec<HashMap<String, String>>| {
                     Some(
                         isbns
-                            .into_iter()
-                            .map(|h| h.values().cloned().collect::<Vec<String>>())
+                            .iter_mut()
+                            .map(|h| h.remove("identifier"))
                             .flatten()
                             .collect::<Vec<String>>(),
                     )
@@ -227,24 +238,100 @@ impl<'de> Deserialize<'de> for GoogleBooks {
                             if title.is_some() {
                                 return Err(de::Error::duplicate_field("title"));
                             }
-                            title = parse_title(map.next_value()?);
+                            title = parse_to_string(map.next_value()?);
                         }
 
                         Field::IndustryIdentifiers => {
                             if isbns.is_some() {
                                 return Err(de::Error::duplicate_field("industryIdentifiers"));
                             }
-                            isbns = parse_isbns(map.next_value::<Vec<HashMap<String, String>>>()?);
+                            isbns = parse_isbns(map.next_value()?);
                         }
 
+                        Field::Authors => {
+                            if authors.is_some() {
+                                return Err(de::Error::duplicate_field("authors"));
+                            }
+                            authors = parse_to_vec_of_string(map.next_value()?);
+                        }
+
+                        Field::Description => {
+                            if description.is_some() {
+                                return Err(de::Error::duplicate_field("description"));
+                            }
+                            description = parse_to_string(map.next_value()?);
+                        }
+
+                        Field::Publisher => {
+                            if publisher.is_some() {
+                                return Err(de::Error::duplicate_field("publisher"));
+                            }
+                            publisher = parse_to_string(map.next_value()?);
+                        }
+
+                        Field::PublicationDate => {
+                            if publication_date.is_some() {
+                                return Err(de::Error::duplicate_field("publicationDate"));
+                            }
+                            publication_date = parse_to_string(map.next_value()?);
+                        }
+
+                        Field::Language => {
+                            if language.is_some() {
+                                return Err(de::Error::duplicate_field("language"));
+                            }
+                            language = parse_to_string(map.next_value()?);
+                        }
+
+                        Field::PageCount => {
+                            if page_count.is_some() {
+                                return Err(de::Error::duplicate_field("pageCount"));
+                            }
+                            page_count = parse_to_page_count(map.next_value()?);
+                        }
+
+                        Field::Tags => {
+                            if tags.is_some() {
+                                return Err(de::Error::duplicate_field("tags"));
+                            }
+                            tags = parse_to_vec_of_string(map.next_value()?);
+                        }
+
+                        Field::CoverImages => {
+                            if cover_images.is_some() {
+                                return Err(de::Error::duplicate_field("imageLinks"));
+                            }
+                            cover_images = parse_to_cover_images(map.next_value()?);
+                        }
                         _ => {}
                     }
                 }
 
                 let title = title.ok_or_else(|| de::Error::missing_field("title"))?;
                 let isbns = isbns.ok_or_else(|| de::Error::missing_field("industryIdentifiers"))?;
+                let authors = authors.ok_or_else(|| de::Error::missing_field("authors"))?;
+                let description =
+                    description.ok_or_else(|| de::Error::missing_field("description"))?;
+                let publisher = publisher.ok_or_else(|| de::Error::missing_field("publisher"))?;
+                let language = language.ok_or_else(|| de::Error::missing_field("language"))?;
+                let publication_date =
+                    publication_date.ok_or_else(|| de::Error::missing_field("publicationDate"))?;
+                let page_count = page_count.ok_or_else(|| de::Error::missing_field("pageCount"))?;
+                let tags = tags.ok_or_else(|| de::Error::missing_field("categories"))?;
+                let cover_images =
+                    cover_images.ok_or_else(|| de::Error::missing_field("imageLinks"))?;
 
-                Ok(GoogleBooks::default().title(title).isbns(isbns))
+                Ok(GoogleBooks::default()
+                    .title(title)
+                    .isbns(isbns)
+                    .authors(authors)
+                    .description(description)
+                    .publisher(publisher)
+                    .publication_date(publication_date)
+                    .language(language)
+                    .pages(page_count)
+                    .tags(tags)
+                    .cover_images(cover_images))
             }
         }
 
