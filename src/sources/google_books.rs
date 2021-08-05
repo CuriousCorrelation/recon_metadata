@@ -128,7 +128,7 @@ impl<'de> Deserialize<'de> for GoogleBooks {
             Isbn,
             PageCount,
             Tags,
-            ImageLinks,
+            CoverImages,
             Language,
             Ignore,
         }
@@ -175,7 +175,7 @@ impl<'de> Deserialize<'de> for GoogleBooks {
                             "identifier" => Ok(Field::Isbn),
                             "pageCount" => Ok(Field::PageCount),
                             "categories" => Ok(Field::Tags),
-                            "imageLinks" => Ok(Field::ImageLinks),
+                            "imageLinks" => Ok(Field::CoverImages),
                             "language" => Ok(Field::Language),
                             _ => Ok(Field::Ignore),
                         }
