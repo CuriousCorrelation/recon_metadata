@@ -134,14 +134,14 @@ impl<'de> Deserialize<'de> for GoogleBooks {
     {
         enum Field {
             Title,
-            Authors,
+            Author,
             Publisher,
             PublicationDate,
             Description,
             IndustryIdentifiers,
             Isbn,
             PageCount,
-            Tags,
+            Tag,
             CoverImages,
             Language,
             Ignore,
@@ -156,7 +156,7 @@ impl<'de> Deserialize<'de> for GoogleBooks {
             "industryIdentifiers",
             "isbn",
             "pageCount",
-            "tags",
+            "categories",
             "imageLinks",
             "language",
         ];
@@ -181,14 +181,14 @@ impl<'de> Deserialize<'de> for GoogleBooks {
                     {
                         match value {
                             "title" => Ok(Field::Title),
-                            "authors" => Ok(Field::Authors),
+                            "authors" => Ok(Field::Author),
                             "publisher" => Ok(Field::Publisher),
                             "publishedDate" => Ok(Field::PublicationDate),
                             "description" => Ok(Field::Description),
                             "industryIdentifiers" => Ok(Field::IndustryIdentifiers),
                             "identifier" => Ok(Field::Isbn),
                             "pageCount" => Ok(Field::PageCount),
-                            "categories" => Ok(Field::Tags),
+                            "categories" => Ok(Field::Tag),
                             "imageLinks" => Ok(Field::CoverImages),
                             "language" => Ok(Field::Language),
                             _ => Ok(Field::Ignore),
@@ -213,16 +213,16 @@ impl<'de> Deserialize<'de> for GoogleBooks {
             where
                 V: MapAccess<'de>,
             {
-                let mut isbns = None;
+                let mut isbn = None;
                 let mut title = None;
-                let mut authors = None;
+                let mut author = None;
                 let mut description = None;
                 let mut publisher = None;
                 let mut publication_date = None;
                 let mut language = None;
                 let mut page_count = None;
-                let mut tags = None;
-                let mut cover_images = None;
+                let mut tag = None;
+                let mut cover_image = None;
 
                 // Helper functions.
                 //
@@ -233,13 +233,12 @@ impl<'de> Deserialize<'de> for GoogleBooks {
                 let parse_to_string = |string: String| Some(string);
                 let parse_to_page_count = |page_count: u16| Some(page_count);
                 let parse_to_vec_of_string = |vec_of_string: Vec<String>| Some(vec_of_string);
-                let parse_to_cover_images = |cover_images: HashMap<String, String>| {
-                    Some(cover_images.into_iter().map(|(_, v)| v).collect())
+                let parse_to_cover_image = |cover_image: HashMap<String, String>| {
+                    Some(cover_image.into_iter().map(|(_, v)| v).collect())
                 };
-                let parse_isbns = |mut isbns: Vec<HashMap<String, String>>| {
+                let parse_isbn = |mut isbn: Vec<HashMap<String, String>>| {
                     Some(
-                        isbns
-                            .iter_mut()
+                        isbn.iter_mut()
                             .map(|h| h.remove("identifier"))
                             .flatten()
                             .collect::<Vec<String>>(),
@@ -256,17 +255,17 @@ impl<'de> Deserialize<'de> for GoogleBooks {
                         }
 
                         Field::IndustryIdentifiers => {
-                            if isbns.is_some() {
+                            if isbn.is_some() {
                                 return Err(de::Error::duplicate_field("industryIdentifiers"));
                             }
-                            isbns = parse_isbns(map.next_value()?);
+                            isbn = parse_isbn(map.next_value()?);
                         }
 
-                        Field::Authors => {
-                            if authors.is_some() {
+                        Field::Author => {
+                            if author.is_some() {
                                 return Err(de::Error::duplicate_field("authors"));
                             }
-                            authors = parse_to_vec_of_string(map.next_value()?);
+                            author = parse_to_vec_of_string(map.next_value()?);
                         }
 
                         Field::Description => {
@@ -304,26 +303,26 @@ impl<'de> Deserialize<'de> for GoogleBooks {
                             page_count = parse_to_page_count(map.next_value()?);
                         }
 
-                        Field::Tags => {
-                            if tags.is_some() {
-                                return Err(de::Error::duplicate_field("tags"));
+                        Field::Tag => {
+                            if tag.is_some() {
+                                return Err(de::Error::duplicate_field("categories"));
                             }
-                            tags = parse_to_vec_of_string(map.next_value()?);
+                            tag = parse_to_vec_of_string(map.next_value()?);
                         }
 
                         Field::CoverImages => {
-                            if cover_images.is_some() {
+                            if cover_image.is_some() {
                                 return Err(de::Error::duplicate_field("imageLinks"));
                             }
-                            cover_images = parse_to_cover_images(map.next_value()?);
+                            cover_image = parse_to_cover_image(map.next_value()?);
                         }
                         _ => {}
                     }
                 }
 
                 let title = title.ok_or_else(|| de::Error::missing_field("title"))?;
-                let isbns = isbns.ok_or_else(|| de::Error::missing_field("industryIdentifiers"))?;
-                let authors = authors.ok_or_else(|| de::Error::missing_field("authors"))?;
+                let isbn = isbn.ok_or_else(|| de::Error::missing_field("industryIdentifiers"))?;
+                let author = author.ok_or_else(|| de::Error::missing_field("authors"))?;
                 let description =
                     description.ok_or_else(|| de::Error::missing_field("description"))?;
                 let publisher = publisher.ok_or_else(|| de::Error::missing_field("publisher"))?;
@@ -331,21 +330,21 @@ impl<'de> Deserialize<'de> for GoogleBooks {
                 let publication_date =
                     publication_date.ok_or_else(|| de::Error::missing_field("publicationDate"))?;
                 let page_count = page_count.ok_or_else(|| de::Error::missing_field("pageCount"))?;
-                let tags = tags.ok_or_else(|| de::Error::missing_field("categories"))?;
-                let cover_images =
-                    cover_images.ok_or_else(|| de::Error::missing_field("imageLinks"))?;
+                let tag = tag.ok_or_else(|| de::Error::missing_field("categories"))?;
+                let cover_image =
+                    cover_image.ok_or_else(|| de::Error::missing_field("imageLinks"))?;
 
                 Ok(GoogleBooks::default()
                     .title(title)
-                    .isbns(isbns)
-                    .authors(authors)
+                    .isbn(isbn)
+                    .author(author)
                     .description(description)
                     .publisher(publisher)
                     .publication_date(publication_date)
                     .language(language)
-                    .pages(page_count)
-                    .tags(tags)
-                    .cover_images(cover_images))
+                    .page_count(page_count)
+                    .tag(tag)
+                    .cover_image(cover_image))
             }
         }
 
