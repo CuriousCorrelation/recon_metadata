@@ -25,7 +25,7 @@ pub struct Metadata {
     // `titles` is built from a [`Vec`] of book authors.
     authors:           base::Authors,
     // `description` is a short description for the book.
-    description:       base::Description,
+    descriptions:      base::Descriptions,
     // `publishers` is built from a [`Vec`] of book publishers.
     publishers:        base::Publishers,
     // `publisher_dates` is built from a [`Vec`] of book's publication dates.
@@ -67,6 +67,8 @@ impl Metadata {
     pub fn description(mut self, description: base::Description) -> Self {
         self.description = description;
         info!("Field `description` is set to: {:#?}", self.description);
+    pub fn descriptions(mut self, descriptions: base::Descriptions) -> Self {
+        self.descriptions = descriptions;
         self
     }
 
