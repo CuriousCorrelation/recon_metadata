@@ -44,9 +44,9 @@ impl GoogleBooks {
         self
     }
 
-    pub fn authors(mut self, authors: Vec<String>) -> Self {
-        self.authors = authors;
-        info!("Field `authors` is set to: {:#?}", self.authors);
+    pub fn author(mut self, author: Vec<String>) -> Self {
+        self.author = author;
+        info!("Field `author` is set to: {:#?}", self.author);
         self
     }
 
@@ -77,21 +77,21 @@ impl GoogleBooks {
         self
     }
 
-    pub fn pages(mut self, page_count: u16) -> Self {
+    pub fn page_count(mut self, page_count: u16) -> Self {
         self.page_count = page_count;
         info!("Field `page_count` is set to: {:#?}", self.page_count);
         self
     }
 
-    pub fn tags(mut self, tags: Vec<String>) -> Self {
-        self.tags = tags;
-        info!("Field `tags` is set to: {:#?}", self.tags);
+    pub fn tag(mut self, tag: Vec<String>) -> Self {
+        self.tag = tag;
+        info!("Field `tag` is set to: {:#?}", self.tag);
         self
     }
 
-    pub fn cover_images(mut self, cover_images: Vec<String>) -> Self {
-        self.cover_images = cover_images;
-        info!("Field `cover_images` is set to: {:#?}", self.cover_images);
+    pub fn cover_image(mut self, cover_image: Vec<String>) -> Self {
+        self.cover_image = cover_image;
+        info!("Field `cover_image` is set to: {:#?}", self.cover_image);
         self
     }
 }
