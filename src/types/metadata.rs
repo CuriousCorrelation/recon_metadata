@@ -1,9 +1,9 @@
 use super::base;
-use log::info;
+use log::debug;
 
 #[derive(Debug, Default)]
 
-/// [`Metadata`] type provides additional information to [`Minimal`]'s essential base.
+/// [`Metadata`] type provides additional debugrmation to [`Minimal`]'s essential base.
 /// [`Metadata`] contains the following:
 /// 1. (Certain) ISBN-10 and/or ISBN-13
 /// 2. (Certain) Title(s)
@@ -48,39 +48,37 @@ pub struct Metadata {
 impl Metadata {
     pub fn isbns(mut self, isbns: base::ISBNs) -> Self {
         self.isbns = isbns;
-        info!("Field `isbns` is set to: {:#?}", self.isbns);
+        debug!("Field `isbns` is set to: {:#?}", self.isbns);
         self
     }
 
     pub fn titles(mut self, titles: base::Titles) -> Self {
         self.titles = titles;
-        info!("Field `titles` is set to: {:#?}", self.titles);
+        debug!("Field `titles` is set to: {:#?}", self.titles);
         self
     }
 
     pub fn authors(mut self, authors: base::Authors) -> Self {
         self.authors = authors;
-        info!("Field `authors` is set to: {:#?}", self.authors);
+        debug!("Field `authors` is set to: {:#?}", self.authors);
         self
     }
 
-    pub fn description(mut self, description: base::Description) -> Self {
-        self.description = description;
-        info!("Field `description` is set to: {:#?}", self.description);
     pub fn descriptions(mut self, descriptions: base::Descriptions) -> Self {
         self.descriptions = descriptions;
+        debug!("Field `descriptions` is set to: {:#?}", self.descriptions);
         self
     }
 
     pub fn publishers(mut self, publishers: base::Publishers) -> Self {
         self.publishers = publishers;
-        info!("Field `publishers` is set to: {:#?}", self.publishers);
+        debug!("Field `publishers` is set to: {:#?}", self.publishers);
         self
     }
 
     pub fn publication_dates(mut self, publication_dates: base::PublicationDates) -> Self {
         self.publication_dates = publication_dates;
-        info!(
+        debug!(
             "Field `publication_dates` is set to: {:#?}",
             self.publication_dates
         );
@@ -89,25 +87,25 @@ impl Metadata {
 
     pub fn languages(mut self, languages: base::Languages) -> Self {
         self.languages = languages;
-        info!("Field `languages` is set to: {:#?}", self.languages);
+        debug!("Field `languages` is set to: {:#?}", self.languages);
         self
     }
 
     pub fn page_count(mut self, page_count: base::PageCount) -> Self {
         self.page_count = page_count;
-        info!("Field `page_count` is set to: {:#?}", self.page_count);
+        debug!("Field `page_count` is set to: {:#?}", self.page_count);
         self
     }
 
     pub fn tags(mut self, tags: base::Tags) -> Self {
         self.tags = tags;
-        info!("Field `tags` is set to: {:#?}", self.tags);
+        debug!("Field `tags` is set to: {:#?}", self.tags);
         self
     }
 
     pub fn cover_images(mut self, cover_images: base::CoverImages) -> Self {
         self.cover_images = cover_images;
-        info!("Field `cover_images` is set to: {:#?}", self.cover_images);
+        debug!("Field `cover_images` is set to: {:#?}", self.cover_images);
         self
     }
 }
