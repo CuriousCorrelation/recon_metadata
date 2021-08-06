@@ -114,13 +114,16 @@ impl GoogleBooks {
                 .await
                 .map_err(ReconError::Connection)?["items"]
                 .take(),
-        )
+        ) // "items" is an array of maps.
         .map_err(ReconError::JSONParse)?
         .iter_mut()
         .map(|v: &mut serde_json::Value| {
             serde_json::from_value(v["volumeInfo"].take()).map_err(ReconError::JSONParse)
-        })
+        }) // Each map contains "volumeInfo" field.
         .collect::<Result<Vec<Self>, ReconError>>()
+        .map(|mut v: Vec<Self>| v.remove(0))
+        // "items" returned by ISBN search should only have one element
+        // in "items" array of maps.
     }
 }
 
