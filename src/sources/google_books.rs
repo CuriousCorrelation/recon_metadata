@@ -9,22 +9,32 @@ use std::collections::HashMap;
 
 #[derive(Debug, Default)]
 pub struct GoogleBooks {
-    isbns:            Vec<String>,
+    // "industryIdentifiers"/["identifier"]
+    isbn:             Vec<String>,
+    // "title"
     title:            String,
-    authors:          Vec<String>,
+    // "authors"
+    author:           Vec<String>,
+    // "description"
     description:      String,
+    // "publisher"
     publisher:        String,
+    // "publishedDate"
     publication_date: String,
+    // "language"
     language:         String,
+    // "pageCount"
     page_count:       u16,
-    tags:             Vec<String>,
-    cover_images:     Vec<String>,
+    // "categories"
+    tag:              Vec<String>,
+    // "imageLinks"/["smallThumbnail", "thumbnail", ... ]
+    cover_image:      Vec<String>,
 }
 
 impl GoogleBooks {
-    pub fn isbns(mut self, isbns: Vec<String>) -> Self {
-        self.isbns = isbns;
-        info!("Field `isbns` is set to: {:#?}", self.isbns);
+    pub fn isbn(mut self, isbn: Vec<String>) -> Self {
+        self.isbn = isbn;
+        info!("Field `isbn` is set to: {:#?}", self.isbn);
         self
     }
 
