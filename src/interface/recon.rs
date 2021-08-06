@@ -1,3 +1,5 @@
+use std::{error, fmt};
+
 #[derive(Debug)]
 /// A wrapper around errors raised by parsing libraries used in `book_recon_metadata`
 pub enum ReconError {
@@ -10,3 +12,11 @@ pub enum ReconError {
     /// A wrapper around [`chrono::ParseError`] typically raised by `NaiveDate::parse_from_str(&string, &format_Str)`
     DateParse(chrono::ParseError),
 }
+
+impl fmt::Display for ReconError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        write!(f, "{:#?}", self)
+    }
+}
+
+impl error::Error for ReconError {}
