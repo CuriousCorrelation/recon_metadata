@@ -1,100 +1,16 @@
-use crate::interface::recon::ReconError;
+use crate::sources::adaptor;
+use crate::{interface::recon::ReconError, types::metadata::Metadata};
+use chrono::NaiveDate;
 use core::fmt;
+use isbn::Isbn;
 use log::info;
 use serde::{
-    de::{self, MapAccess, Visitor},
+    de::{self, Error, MapAccess, Visitor},
     Deserialize, Deserializer,
 };
-use std::collections::HashMap;
 
 #[derive(Debug, Default)]
-pub struct GoogleBooks {
-    // "industryIdentifiers"/["identifier"]
-    isbn:             Vec<String>,
-    // "title"
-    title:            String,
-    // "authors"
-    author:           Vec<String>,
-    // "description"
-    description:      String,
-    // "publisher"
-    publisher:        String,
-    // "publishedDate"
-    publication_date: String,
-    // "language"
-    language:         String,
-    // "pageCount"
-    page_count:       u16,
-    // "categories"
-    tag:              Vec<String>,
-    // "imageLinks"/["smallThumbnail", "thumbnail", ... ]
-    cover_image:      Vec<String>,
-}
-
-impl GoogleBooks {
-    pub fn isbn(mut self, isbn: Vec<String>) -> Self {
-        self.isbn = isbn;
-        info!("Field `isbn` is set to: {:#?}", self.isbn);
-        self
-    }
-
-    pub fn title(mut self, title: String) -> Self {
-        self.title = title;
-        info!("Field `title` is set to: {:#?}", self.title);
-        self
-    }
-
-    pub fn author(mut self, author: Vec<String>) -> Self {
-        self.author = author;
-        info!("Field `author` is set to: {:#?}", self.author);
-        self
-    }
-
-    pub fn description(mut self, description: String) -> Self {
-        self.description = description;
-        info!("Field `description` is set to: {:#?}", self.description);
-        self
-    }
-
-    pub fn publisher(mut self, publisher: String) -> Self {
-        self.publisher = publisher;
-        info!("Field `publisher` is set to: {:#?}", self.publisher);
-        self
-    }
-
-    pub fn publication_date(mut self, publication_date: String) -> Self {
-        self.publication_date = publication_date;
-        info!(
-            "Field `publication_date` is set to: {:#?}",
-            self.publication_date
-        );
-        self
-    }
-
-    pub fn language(mut self, language: String) -> Self {
-        self.language = language;
-        info!("Field `language` is set to: {:#?}", self.language);
-        self
-    }
-
-    pub fn page_count(mut self, page_count: u16) -> Self {
-        self.page_count = page_count;
-        info!("Field `page_count` is set to: {:#?}", self.page_count);
-        self
-    }
-
-    pub fn tag(mut self, tag: Vec<String>) -> Self {
-        self.tag = tag;
-        info!("Field `tag` is set to: {:#?}", self.tag);
-        self
-    }
-
-    pub fn cover_image(mut self, cover_image: Vec<String>) -> Self {
-        self.cover_image = cover_image;
-        info!("Field `cover_image` is set to: {:#?}", self.cover_image);
-        self
-    }
-}
+pub struct GoogleBooks(Metadata);
 
 impl GoogleBooks {
     pub async fn from_isbn(isbn: &isbn::Isbn) -> Result<Self, ReconError> {
@@ -221,29 +137,6 @@ impl<'de> Deserialize<'de> for GoogleBooks {
                 let mut published_date = None;
                 let mut language = None;
                 let mut page_count = None;
-                let mut tag = None;
-                let mut cover_image = None;
-
-                // Helper functions.
-                //
-                // Functions named after fields such as `parse_to_page_count`
-                // are unique function that isn't used by any other field.
-                //
-                // Generic function such as `parse_to_string` are used by multiple fields.
-                let parse_to_string = |string: String| Some(string);
-                let parse_to_page_count = |page_count: u16| Some(page_count);
-                let parse_to_vec_of_string = |vec_of_string: Vec<String>| Some(vec_of_string);
-                let parse_to_cover_image = |cover_image: HashMap<String, String>| {
-                    Some(cover_image.into_iter().map(|(_, v)| v).collect())
-                };
-                let parse_isbn = |mut isbn: Vec<HashMap<String, String>>| {
-                    Some(
-                        isbn.iter_mut()
-                            .map(|h| h.remove("identifier"))
-                            .flatten()
-                            .collect::<Vec<String>>(),
-                    )
-                };
                 let mut categories = None;
                 let mut image_links = None;
 
@@ -251,101 +144,178 @@ impl<'de> Deserialize<'de> for GoogleBooks {
                     match key {
                         Field::Title => {
                             if title.is_some() {
-                                return Err(de::Error::duplicate_field("title"));
+                                return Err(ReconError::JSONParse(de::Error::duplicate_field(
+                                    "title",
+                                )))
+                                .map_err(V::Error::custom);
                             }
-                            title = parse_to_string(map.next_value()?);
+                            title = adaptor::parse_string(map.next_value()?);
                         }
 
                         Field::IndustryIdentifiers => {
                             if isbn.is_some() {
-                                return Err(de::Error::duplicate_field("industryIdentifiers"));
+                                return Err(ReconError::JSONParse(de::Error::duplicate_field(
+                                    "industryIdentifiers",
+                                )))
+                                .map_err(V::Error::custom);
                             }
-                            isbn = parse_isbn(map.next_value()?);
+                            isbn = adaptor::parse_google_books_isbn(map.next_value()?);
                         }
 
-                        Field::Author => {
-                            if author.is_some() {
-                                return Err(de::Error::duplicate_field("authors"));
+                        Field::Authors => {
+                            if authors.is_some() {
+                                return Err(ReconError::JSONParse(de::Error::duplicate_field(
+                                    "authors",
+                                )))
+                                .map_err(V::Error::custom);
                             }
-                            author = parse_to_vec_of_string(map.next_value()?);
+                            authors = adaptor::parse_vec(map.next_value()?);
                         }
 
                         Field::Description => {
                             if description.is_some() {
-                                return Err(de::Error::duplicate_field("description"));
+                                return Err(ReconError::JSONParse(de::Error::duplicate_field(
+                                    "description",
+                                )))
+                                .map_err(V::Error::custom);
                             }
-                            description = parse_to_string(map.next_value()?);
+                            description = adaptor::parse_string(map.next_value()?);
                         }
 
                         Field::Publisher => {
                             if publisher.is_some() {
-                                return Err(de::Error::duplicate_field("publisher"));
+                                return Err(ReconError::JSONParse(de::Error::duplicate_field(
+                                    "publisher",
+                                )))
+                                .map_err(V::Error::custom);
                             }
-                            publisher = parse_to_string(map.next_value()?);
+                            publisher = adaptor::parse_string(map.next_value()?);
                         }
 
-                        Field::PublicationDate => {
-                            if publication_date.is_some() {
-                                return Err(de::Error::duplicate_field("publicationDate"));
+                        Field::PublishedDate => {
+                            if published_date.is_some() {
+                                return Err(ReconError::JSONParse(de::Error::duplicate_field(
+                                    "publishedDate",
+                                )))
+                                .map_err(V::Error::custom);
                             }
-                            publication_date = parse_to_string(map.next_value()?);
+                            published_date = adaptor::parse_published_date(map.next_value()?);
                         }
 
                         Field::Language => {
                             if language.is_some() {
-                                return Err(de::Error::duplicate_field("language"));
+                                return Err(ReconError::JSONParse(de::Error::duplicate_field(
+                                    "language",
+                                )))
+                                .map_err(V::Error::custom);
                             }
-                            language = parse_to_string(map.next_value()?);
+                            language = adaptor::parse_string(map.next_value()?);
                         }
 
                         Field::PageCount => {
                             if page_count.is_some() {
-                                return Err(de::Error::duplicate_field("pageCount"));
+                                return Err(ReconError::JSONParse(de::Error::duplicate_field(
+                                    "page_count",
+                                )))
+                                .map_err(V::Error::custom);
                             }
-                            page_count = parse_to_page_count(map.next_value()?);
+                            page_count = adaptor::parse_page_count(map.next_value()?);
                         }
 
-                        Field::Tag => {
-                            if tag.is_some() {
-                                return Err(de::Error::duplicate_field("categories"));
+                        Field::Categories => {
+                            if categories.is_some() {
+                                return Err(ReconError::JSONParse(de::Error::duplicate_field(
+                                    "categories",
+                                )))
+                                .map_err(V::Error::custom);
                             }
-                            tag = parse_to_vec_of_string(map.next_value()?);
+                            categories = adaptor::parse_vec(map.next_value()?);
                         }
 
-                        Field::CoverImages => {
-                            if cover_image.is_some() {
-                                return Err(de::Error::duplicate_field("imageLinks"));
+                        Field::ImageLinks => {
+                            if image_links.is_some() {
+                                return Err(ReconError::JSONParse(de::Error::duplicate_field(
+                                    "imageLinks",
+                                )))
+                                .map_err(V::Error::custom);
                             }
-                            cover_image = parse_to_cover_image(map.next_value()?);
+                            image_links = adaptor::parse_image_links(map.next_value()?);
                         }
+
                         _ => {}
                     }
                 }
 
-                let title = title.ok_or_else(|| de::Error::missing_field("title"))?;
-                let isbn = isbn.ok_or_else(|| de::Error::missing_field("industryIdentifiers"))?;
-                let description =
-                    description.ok_or_else(|| de::Error::missing_field("description"))?;
-                let publisher = publisher.ok_or_else(|| de::Error::missing_field("publisher"))?;
-                let language = language.ok_or_else(|| de::Error::missing_field("language"))?;
-                let publication_date =
-                    publication_date.ok_or_else(|| de::Error::missing_field("publicationDate"))?;
-                let page_count = page_count.ok_or_else(|| de::Error::missing_field("pageCount"))?;
-                let tag = tag.ok_or_else(|| de::Error::missing_field("categories"))?;
-                let cover_image =
-                    cover_image.ok_or_else(|| de::Error::missing_field("imageLinks"))?;
+                // These variable besides converting `Option` to `Result` with serde error
+                // convert singular into plural if required otherwise simply
+                // rename to preserve consistency in variable and method names.
+                // ```
+                //        ...
+                //       .titles(titles)
+                //        ...
+                //       .descriptions(descriptions)
+                //        ...
+                //       .publication_dates(publication_dates)
+                // ```
+                // Contrast between `published_date` and `publication_dates`
+                // is to highlight `API` field name vs `Metadata` field name.
+                //
+                // Here `titles` is converting singular `title` into plural `titles`
+                // by wrapping `title` into a `Vec`.
+                //
+                // `isbns` is simply renaming the variable.
+                let title: Result<String, ReconError> =
+                    title.ok_or_else(|| de::Error::missing_field("title"))?;
+                let titles: Vec<Result<String, ReconError>> = vec![title];
 
-                Ok(GoogleBooks::default()
-                    .title(title)
-                    .isbn(isbn)
-                    .author(author)
-                    .description(description)
-                    .publisher(publisher)
-                    .publication_date(publication_date)
-                    .language(language)
-                    .page_count(page_count)
-                    .tag(tag)
-                    .cover_image(cover_image))
+                let authors: Vec<Result<String, ReconError>> =
+                    authors.ok_or_else(|| de::Error::missing_field("authors"))?;
+
+                let isbn: Vec<Result<Isbn, ReconError>> =
+                    isbn.ok_or_else(|| de::Error::missing_field("industryIdentifiers"))?;
+                let isbns = isbn;
+
+                let description: Result<String, ReconError> =
+                    description.ok_or_else(|| de::Error::missing_field("description"))?;
+                let descriptions: Vec<Result<String, ReconError>> = vec![description];
+
+                let publisher: Result<String, ReconError> =
+                    publisher.ok_or_else(|| de::Error::missing_field("publisher"))?;
+                let publishers: Vec<Result<String, ReconError>> = vec![publisher];
+
+                let published_date: Result<NaiveDate, ReconError> =
+                    published_date.ok_or_else(|| de::Error::missing_field("publishedDate"))?;
+                let publication_dates: Vec<Result<NaiveDate, ReconError>> = vec![published_date];
+
+                let language: Result<String, ReconError> =
+                    language.ok_or_else(|| de::Error::missing_field("language"))?;
+                let languages: Vec<Result<String, ReconError>> = vec![language];
+
+                let page_count: Result<u16, ReconError> =
+                    page_count.ok_or_else(|| de::Error::missing_field("pageCount"))?;
+                let page_count: Vec<Result<u16, ReconError>> = vec![page_count];
+
+                let image_links: Vec<Result<String, ReconError>> =
+                    image_links.ok_or_else(|| de::Error::missing_field("imageLinks"))?;
+                let cover_images: Vec<Result<String, ReconError>> = image_links;
+
+                let categories: Vec<Result<String, ReconError>> =
+                    categories.ok_or_else(|| de::Error::missing_field("categories"))?;
+                let tags: Vec<Result<String, ReconError>> = categories;
+
+                Ok(GoogleBooks(
+                    Metadata::default()
+                        .titles(titles)
+                        .isbns(isbns)
+                        .authors(authors)
+                        .descriptions(descriptions)
+                        .publishers(publishers)
+                        .publication_dates(publication_dates)
+                        .languages(languages)
+                        .page_count(page_count)
+                        .tags(tags)
+                        .cover_images(cover_images),
+                ))
             }
         }
 
@@ -353,6 +323,7 @@ impl<'de> Deserialize<'de> for GoogleBooks {
     }
 }
 
+#[cfg(test)]
 mod test {
     fn init_logger() {
         let _ = env_logger::builder().is_test(true).try_init();
