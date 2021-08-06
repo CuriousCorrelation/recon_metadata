@@ -134,15 +134,15 @@ impl<'de> Deserialize<'de> for GoogleBooks {
     {
         enum Field {
             Title,
-            Author,
+            Authors,
             Publisher,
-            PublicationDate,
+            PublishedDate,
             Description,
             IndustryIdentifiers,
             Isbn,
             PageCount,
-            Tag,
-            CoverImages,
+            Categories,
+            ImageLinks,
             Language,
             Ignore,
         }
@@ -181,15 +181,15 @@ impl<'de> Deserialize<'de> for GoogleBooks {
                     {
                         match value {
                             "title" => Ok(Field::Title),
-                            "authors" => Ok(Field::Author),
+                            "authors" => Ok(Field::Authors),
                             "publisher" => Ok(Field::Publisher),
-                            "publishedDate" => Ok(Field::PublicationDate),
+                            "publishedDate" => Ok(Field::PublishedDate),
                             "description" => Ok(Field::Description),
                             "industryIdentifiers" => Ok(Field::IndustryIdentifiers),
                             "identifier" => Ok(Field::Isbn),
                             "pageCount" => Ok(Field::PageCount),
-                            "categories" => Ok(Field::Tag),
-                            "imageLinks" => Ok(Field::CoverImages),
+                            "categories" => Ok(Field::Categories),
+                            "imageLinks" => Ok(Field::ImageLinks),
                             "language" => Ok(Field::Language),
                             _ => Ok(Field::Ignore),
                         }
@@ -215,10 +215,10 @@ impl<'de> Deserialize<'de> for GoogleBooks {
             {
                 let mut isbn = None;
                 let mut title = None;
-                let mut author = None;
+                let mut authors = None;
                 let mut description = None;
                 let mut publisher = None;
-                let mut publication_date = None;
+                let mut published_date = None;
                 let mut language = None;
                 let mut page_count = None;
                 let mut tag = None;
@@ -244,6 +244,8 @@ impl<'de> Deserialize<'de> for GoogleBooks {
                             .collect::<Vec<String>>(),
                     )
                 };
+                let mut categories = None;
+                let mut image_links = None;
 
                 while let Some(key) = map.next_key()? {
                     match key {
@@ -322,7 +324,6 @@ impl<'de> Deserialize<'de> for GoogleBooks {
 
                 let title = title.ok_or_else(|| de::Error::missing_field("title"))?;
                 let isbn = isbn.ok_or_else(|| de::Error::missing_field("industryIdentifiers"))?;
-                let author = author.ok_or_else(|| de::Error::missing_field("authors"))?;
                 let description =
                     description.ok_or_else(|| de::Error::missing_field("description"))?;
                 let publisher = publisher.ok_or_else(|| de::Error::missing_field("publisher"))?;
