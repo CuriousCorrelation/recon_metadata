@@ -97,12 +97,13 @@ impl GoogleBooks {
 }
 
 impl GoogleBooks {
-    pub async fn from_isbn(isbn: &isbn::Isbn) -> Result<Vec<Self>, ReconError> {
-        let base_url = "https://www.googleapis.com/books/v1/volumes?q=isbn:";
-        let req = format!("{}{}", base_url, urlencoding::encode(&isbn.to_string()));
+    pub async fn from_isbn(isbn: &isbn::Isbn) -> Result<Self, ReconError> {
+        let req = format!(
+            "https://www.googleapis.com/books/v1/volumes?q=isbn:{}",
+            urlencoding::encode(&isbn.to_string())
+        );
 
         info!("ISBN: {:#?}", isbn);
-        info!("Base URL: {:#?}", base_url);
         info!("Request: {:#?}", req);
 
         serde_json::from_value::<Vec<serde_json::Value>>(
