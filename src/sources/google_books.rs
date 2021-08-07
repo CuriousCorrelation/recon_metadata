@@ -549,7 +549,7 @@ mod test {
 
     #[tokio::test]
     async fn parses_minimal_from_isbn() {
-        use super::GoogleBooks;
+        use super::GoogleBooksMinimal;
         use isbn::Isbn;
         use log::info;
         use std::str::FromStr;
@@ -557,7 +557,7 @@ mod test {
         init_logger();
 
         let isbn = Isbn::from_str("9781534431003").unwrap();
-        let resp = GoogleBooks::from_isbn(&isbn).await;
+        let resp = GoogleBooksMinimal::from_isbn(&isbn).await;
         info!("Response: {:#?}", resp);
         assert!(resp.is_ok())
     }
