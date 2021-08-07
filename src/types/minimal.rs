@@ -6,13 +6,13 @@ use log::debug;
 pub struct Minimal {
     /// `isbns` is built from a [`Vec`] of
     /// [ISBN](https://en.wikipedia.org/wiki/International_Standard_Book_Number).
-    isbns:                   base::ISBNs,
+    pub(crate) isbns:        base::ISBNs,
     /// `titles` is built from a [`Vec`] of book titles.
     /// A book can have multiple titles depending on translations
     /// or way of writing e.g. "Book", "Book #1", "Series Name, Book #1", etc.
-    titles:                  base::Titles,
+    pub(crate) titles:       base::Titles,
     /// `titles` is built from a [`Vec`] of book authors.
-    authors:                 base::Authors,
+    pub(crate) authors:      base::Authors,
     /// `descriptions` is a short descriptions for the book.
     pub(crate) descriptions: base::Descriptions,
 }
