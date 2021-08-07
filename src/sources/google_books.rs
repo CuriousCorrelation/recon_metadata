@@ -25,24 +25,33 @@ impl GoogleBooksMinimal {
         info!("ISBN: {:#?}", isbn);
         info!("Request: {:#?}", req);
 
-        serde_json::from_value::<Vec<serde_json::Value>>(
-            reqwest::get(req)
-                .await
-                .map_err(ReconError::Connection)?
-                .json::<serde_json::Value>()
-                .await
-                .map_err(ReconError::Connection)?["items"]
-                .take(),
-        ) // "items" is an array of maps.
-        .map_err(ReconError::JSONParse)?
-        .iter_mut()
-        .map(|v: &mut serde_json::Value| {
-            serde_json::from_value(v["volumeInfo"].take()).map_err(ReconError::JSONParse)
-        }) // Each map contains "volumeInfo" field.
-        .collect::<Result<Vec<Self>, ReconError>>()
-        .map(|mut v: Vec<Self>| v.remove(0))
-        // "items" returned by ISBN search should only have one element
-        // in "items" array of maps.
+        let response = reqwest::get(req)
+            .await
+            .map_err(ReconError::Connection)?
+            .json::<serde_json::Value>()
+            .await
+            .map_err(ReconError::Connection)?;
+
+        unimplemented!()
+    }
+}
+
+impl GoogleBooksMinimal {
+    async fn metadata(self) -> Result<Vec<GoogleBooks>, ReconError> {
+        let possible_isbn_list = self
+            .0
+            .isbns
+            .into_iter()
+            .collect::<Result<Vec<Isbn>, ReconError>>()?;
+
+        let mut metadata_list = Vec::new();
+
+        for isbn in possible_isbn_list {
+            let metadata = GoogleBooks::from_isbn(&isbn).await?;
+            metadata_list.push(metadata);
+        }
+
+        Ok(metadata_list)
     }
 }
 
