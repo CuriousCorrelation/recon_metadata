@@ -1,5 +1,8 @@
 use crate::sources::adaptor;
-use crate::{interface::recon::ReconError, types::metadata::Metadata};
+use crate::{
+    interface::recon::ReconError,
+    types::{metadata::Metadata, minimal::Minimal},
+};
 use chrono::NaiveDate;
 use core::fmt;
 use isbn::Isbn;
@@ -8,6 +11,258 @@ use serde::{
     de::{self, Error, MapAccess, Visitor},
     Deserialize, Deserializer,
 };
+
+#[derive(Debug, Default)]
+pub struct OpenLibraryMinimal(Minimal);
+
+impl OpenLibraryMinimal {
+    pub async fn from_isbn(isbn: &isbn::Isbn) -> Result<Self, ReconError> {
+        let isbn_key = format!("ISBN:{}", urlencoding::encode(&isbn.to_string()));
+        let req = format!(
+            "https://openlibrary.org/api/books?bibkeys={}&jscmd=details&format=json",
+            isbn_key
+        );
+
+        info!("ISBN: {:#?}", isbn);
+        info!("Request: {:#?}", req);
+
+        let mut first_pass: Self = serde_json::from_value::<serde_json::Value>(
+            reqwest::get(req)
+                .await
+                .map_err(ReconError::Connection)?
+                .json::<serde_json::Value>()
+                .await
+                .map_err(ReconError::Connection)?[isbn_key]["details"]
+                .take(),
+        )
+        .map_err(ReconError::JSONParse)
+        .map(|v| serde_json::from_value::<Self>(v).map_err(ReconError::JSONParse))??;
+
+        let work = first_pass
+            .0
+            .descriptions
+            .pop()
+            .ok_or_else(|| de::Error::missing_field("works"))
+            .map_err(ReconError::JSONParse)??;
+
+        let req = format!("https://openlibrary.org/{}.json", work);
+
+        info!("Request: {:#?}", req);
+
+        let description = reqwest::get(req)
+            .await
+            .map_err(ReconError::Connection)?
+            .json::<serde_json::Value>()
+            .await
+            .map_err(ReconError::Connection)?["description"]
+            .take()
+            .as_str()
+            .map(|s| s.to_string())
+            .ok_or_else(|| de::Error::missing_field("description"))
+            .map_err(ReconError::JSONParse);
+        let descriptions = vec![description];
+
+        first_pass.0.descriptions = descriptions;
+
+        Ok(first_pass)
+    }
+}
+
+impl<'de> Deserialize<'de> for OpenLibraryMinimal {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        enum Field {
+            Title,
+            Authors,
+            Works,
+            Description,
+            ISBN10,
+            ISBN13,
+            Ignore,
+        }
+
+        const FIELDS: &[&str] = &[
+            "title",
+            "authors",
+            "works",
+            "description",
+            "isbn_10",
+            "isbn_13",
+        ];
+
+        impl<'de> Deserialize<'de> for Field {
+            fn deserialize<D>(deserializer: D) -> Result<Field, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                struct FieldVisitor;
+
+                impl<'de> Visitor<'de> for FieldVisitor {
+                    type Value = Field;
+
+                    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                        formatter.write_str("Any of `OpenLibraryMinimal` fields.")
+                    }
+
+                    fn visit_str<E>(self, value: &str) -> Result<Field, E>
+                    where
+                        E: de::Error,
+                    {
+                        match value {
+                            "title" => Ok(Field::Title),
+                            "authors" => Ok(Field::Authors),
+                            "works" => Ok(Field::Works),
+                            "description" => Ok(Field::Description),
+                            "isbn_10" => Ok(Field::ISBN10),
+                            "isbn_13" => Ok(Field::ISBN13),
+                            _ => Ok(Field::Ignore),
+                        }
+                    }
+                }
+
+                deserializer.deserialize_identifier(FieldVisitor)
+            }
+        }
+
+        struct OpenLibraryMinimalVisitor;
+
+        impl<'de> Visitor<'de> for OpenLibraryMinimalVisitor {
+            type Value = OpenLibraryMinimal;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("struct OpenLibraryMinimal")
+            }
+
+            fn visit_map<V>(self, mut map: V) -> Result<OpenLibraryMinimal, V::Error>
+            where
+                V: MapAccess<'de>,
+            {
+                let mut isbn_10 = None;
+                let mut isbn_13 = None;
+                let mut title = None;
+                let mut authors = None;
+                let mut works = None;
+
+                while let Some(key) = map.next_key()? {
+                    match key {
+                        Field::Title => {
+                            if title.is_some() {
+                                return Err(ReconError::JSONParse(de::Error::duplicate_field(
+                                    "title",
+                                )))
+                                .map_err(V::Error::custom);
+                            }
+
+                            title = adaptor::parse_string(map.next_value()?);
+                        }
+
+                        Field::ISBN10 => {
+                            if isbn_10.is_some() {
+                                return Err(ReconError::JSONParse(de::Error::duplicate_field(
+                                    "isbn_10",
+                                )))
+                                .map_err(V::Error::custom);
+                            }
+
+                            isbn_10 = adaptor::parse_open_library_isbn(map.next_value()?);
+                        }
+
+                        Field::ISBN13 => {
+                            if isbn_13.is_some() {
+                                return Err(ReconError::JSONParse(de::Error::duplicate_field(
+                                    "isbn_13",
+                                )))
+                                .map_err(V::Error::custom);
+                            }
+
+                            isbn_13 = adaptor::parse_open_library_isbn(map.next_value()?);
+                        }
+
+                        Field::Authors => {
+                            if authors.is_some() {
+                                return Err(ReconError::JSONParse(de::Error::duplicate_field(
+                                    "authors",
+                                )))
+                                .map_err(V::Error::custom);
+                            }
+
+                            authors = adaptor::parse_authors(map.next_value()?);
+                        }
+
+                        Field::Works => {
+                            if works.is_some() {
+                                return Err(ReconError::JSONParse(de::Error::duplicate_field(
+                                    "works",
+                                )))
+                                .map_err(V::Error::custom);
+                            }
+
+                            works = adaptor::parse_works(map.next_value()?);
+                        }
+
+                        _ => {}
+                    }
+                }
+
+                // These variable besides converting `Option` to `Result` with serde error
+                // convert singular into plural if required otherwise simply
+                // rename to preserve consistency in variable and method names.
+                // ```
+                //        ...
+                //       .titles(titles)
+                //        ...
+                //       .descriptions(descriptions)
+                //        ...
+                //       .publication_dates(publication_dates)
+                // ```
+                // Contrast between `publish_date` and `publication_dates`
+                // is to highlight `API` field name vs `Metadata` field name.
+                //
+                // Here `titles` is converting singular `title` into plural `titles`
+                // by wrapping `title` into a `Vec`.
+                //
+                // `isbns` is simply renaming the variable.
+                let title: Result<String, ReconError> =
+                    title.ok_or_else(|| de::Error::missing_field("title"))?;
+                let titles: Vec<Result<String, ReconError>> = vec![title];
+
+                let authors = match authors {
+                    Some(authors) => authors,
+                    None => vec![],
+                };
+
+                let isbn_10: Vec<Result<Isbn, ReconError>> = match isbn_10 {
+                    Some(isbn_10) => isbn_10,
+                    None => vec![],
+                };
+
+                let isbn_13: Vec<Result<Isbn, ReconError>> = match isbn_13 {
+                    Some(isbn_13) => isbn_13,
+                    None => vec![],
+                };
+
+                let mut isbns = Vec::new();
+                isbns.extend(isbn_10);
+                isbns.extend(isbn_13);
+
+                let works: Vec<Result<String, ReconError>> =
+                    works.ok_or_else(|| de::Error::missing_field("works"))?;
+
+                Ok(OpenLibraryMinimal(
+                    Minimal::default()
+                        .titles(titles)
+                        .isbns(isbns)
+                        .authors(authors)
+                        .descriptions(works),
+                ))
+            }
+        }
+
+        deserializer.deserialize_struct("OpenLibraryMinimal", FIELDS, OpenLibraryMinimalVisitor)
+    }
+}
 
 #[derive(Debug, Default)]
 pub struct OpenLibrary(Metadata);
@@ -369,6 +624,21 @@ mod test {
 
         let isbn = Isbn::from_str("9781534431003").unwrap();
         let resp = OpenLibrary::from_isbn(&isbn).await;
+        info!("Response: {:#?}", resp);
+        assert!(resp.is_ok());
+    }
+
+    #[tokio::test]
+    async fn parses_minimal_from_isbn() {
+        use super::OpenLibraryMinimal;
+        use isbn::Isbn;
+        use log::info;
+        use std::str::FromStr;
+
+        init_logger();
+
+        let isbn = Isbn::from_str("9781534431003").unwrap();
+        let resp = OpenLibraryMinimal::from_isbn(&isbn).await;
         info!("Response: {:#?}", resp);
         assert!(resp.is_ok());
     }

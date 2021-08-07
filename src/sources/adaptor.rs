@@ -225,3 +225,25 @@ pub(crate) fn parse_authors(
             .collect::<Vec<Result<String, ReconError>>>()
     })
 }
+
+pub(crate) fn parse_works(
+    works: Vec<HashMap<String, String>>,
+) -> Option<Vec<Result<String, ReconError>>> {
+    debug!(
+        "`fn parse_works` arg(s) `works` is: {:#?}, expecting `Option<Vec<HashMap<String, String>>>,
+`",
+        works
+    );
+
+    Some(
+        works
+            .into_iter()
+            .map(|h| {
+                h.into_iter()
+                    .map(|(_, v)| Ok(v))
+                    .collect::<Vec<Result<String, ReconError>>>()
+            })
+            .flatten()
+            .collect::<Vec<Result<String, ReconError>>>(),
+    )
+}

@@ -1,5 +1,8 @@
 use crate::sources::adaptor;
-use crate::{interface::recon::ReconError, types::metadata::Metadata};
+use crate::{
+    interface::recon::ReconError,
+    types::{metadata::Metadata, minimal::Minimal},
+};
 use chrono::NaiveDate;
 use core::fmt;
 use isbn::Isbn;
@@ -8,6 +11,206 @@ use serde::{
     de::{self, Error, MapAccess, Visitor},
     Deserialize, Deserializer,
 };
+
+#[derive(Debug, Default)]
+pub struct GoogleBooksMinimal(Minimal);
+
+impl GoogleBooksMinimal {
+    pub async fn from_isbn(isbn: &isbn::Isbn) -> Result<Self, ReconError> {
+        let req = format!(
+            "https://www.googleapis.com/books/v1/volumes?q=isbn:{}",
+            urlencoding::encode(&isbn.to_string())
+        );
+
+        info!("ISBN: {:#?}", isbn);
+        info!("Request: {:#?}", req);
+
+        serde_json::from_value::<Vec<serde_json::Value>>(
+            reqwest::get(req)
+                .await
+                .map_err(ReconError::Connection)?
+                .json::<serde_json::Value>()
+                .await
+                .map_err(ReconError::Connection)?["items"]
+                .take(),
+        ) // "items" is an array of maps.
+        .map_err(ReconError::JSONParse)?
+        .iter_mut()
+        .map(|v: &mut serde_json::Value| {
+            serde_json::from_value(v["volumeInfo"].take()).map_err(ReconError::JSONParse)
+        }) // Each map contains "volumeInfo" field.
+        .collect::<Result<Vec<Self>, ReconError>>()
+        .map(|mut v: Vec<Self>| v.remove(0))
+        // "items" returned by ISBN search should only have one element
+        // in "items" array of maps.
+    }
+}
+
+impl<'de> Deserialize<'de> for GoogleBooksMinimal {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        enum Field {
+            Title,
+            Authors,
+            Description,
+            IndustryIdentifiers,
+            Isbn,
+            Ignore,
+        }
+
+        const FIELDS: &[&str] = &[
+            "title",
+            "authors",
+            "description",
+            "industryIdentifiers",
+            "isbn",
+        ];
+
+        impl<'de> Deserialize<'de> for Field {
+            fn deserialize<D>(deserializer: D) -> Result<Field, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                struct FieldVisitor;
+
+                impl<'de> Visitor<'de> for FieldVisitor {
+                    type Value = Field;
+
+                    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                        formatter.write_str("Any of `GoogleBooksMinimal` fields.")
+                    }
+
+                    fn visit_str<E>(self, value: &str) -> Result<Field, E>
+                    where
+                        E: de::Error,
+                    {
+                        match value {
+                            "title" => Ok(Field::Title),
+                            "authors" => Ok(Field::Authors),
+                            "description" => Ok(Field::Description),
+                            "industryIdentifiers" => Ok(Field::IndustryIdentifiers),
+                            "identifier" => Ok(Field::Isbn),
+                            _ => Ok(Field::Ignore),
+                        }
+                    }
+                }
+
+                deserializer.deserialize_identifier(FieldVisitor)
+            }
+        }
+
+        struct GoogleBooksMinimalVisitor;
+
+        impl<'de> Visitor<'de> for GoogleBooksMinimalVisitor {
+            type Value = GoogleBooksMinimal;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("struct GoogleBooksMinimal")
+            }
+
+            fn visit_map<V>(self, mut map: V) -> Result<GoogleBooksMinimal, V::Error>
+            where
+                V: MapAccess<'de>,
+            {
+                let mut isbn = None;
+                let mut title = None;
+                let mut authors = None;
+                let mut description = None;
+
+                while let Some(key) = map.next_key()? {
+                    match key {
+                        Field::Title => {
+                            if title.is_some() {
+                                return Err(ReconError::JSONParse(de::Error::duplicate_field(
+                                    "title",
+                                )))
+                                .map_err(V::Error::custom);
+                            }
+                            title = adaptor::parse_string(map.next_value()?);
+                        }
+
+                        Field::IndustryIdentifiers => {
+                            if isbn.is_some() {
+                                return Err(ReconError::JSONParse(de::Error::duplicate_field(
+                                    "industryIdentifiers",
+                                )))
+                                .map_err(V::Error::custom);
+                            }
+                            isbn = adaptor::parse_google_books_isbn(map.next_value()?);
+                        }
+
+                        Field::Authors => {
+                            if authors.is_some() {
+                                return Err(ReconError::JSONParse(de::Error::duplicate_field(
+                                    "authors",
+                                )))
+                                .map_err(V::Error::custom);
+                            }
+                            authors = adaptor::parse_vec(map.next_value()?);
+                        }
+
+                        Field::Description => {
+                            if description.is_some() {
+                                return Err(ReconError::JSONParse(de::Error::duplicate_field(
+                                    "description",
+                                )))
+                                .map_err(V::Error::custom);
+                            }
+                            description = adaptor::parse_string(map.next_value()?);
+                        }
+
+                        _ => {}
+                    }
+                }
+
+                // These variable besides converting `Option` to `Result` with serde error
+                // convert singular into plural if required otherwise simply
+                // rename to preserve consistency in variable and method names.
+                // ```
+                //        ...
+                //       .titles(titles)
+                //        ...
+                //       .descriptions(descriptions)
+                //        ...
+                //       .publication_dates(publication_dates)
+                // ```
+                // Contrast between `published_date` and `publication_dates`
+                // is to highlight `API` field name vs `Metadata` field name.
+                //
+                // Here `titles` is converting singular `title` into plural `titles`
+                // by wrapping `title` into a `Vec`.
+                //
+                // `isbns` is simply renaming the variable.
+                let title: Result<String, ReconError> =
+                    title.ok_or_else(|| de::Error::missing_field("title"))?;
+                let titles: Vec<Result<String, ReconError>> = vec![title];
+
+                let authors: Vec<Result<String, ReconError>> =
+                    authors.ok_or_else(|| de::Error::missing_field("authors"))?;
+
+                let isbn: Vec<Result<Isbn, ReconError>> =
+                    isbn.ok_or_else(|| de::Error::missing_field("industryIdentifiers"))?;
+                let isbns = isbn;
+
+                let description: Result<String, ReconError> =
+                    description.ok_or_else(|| de::Error::missing_field("description"))?;
+                let descriptions: Vec<Result<String, ReconError>> = vec![description];
+
+                Ok(GoogleBooksMinimal(
+                    Minimal::default()
+                        .titles(titles)
+                        .isbns(isbns)
+                        .authors(authors)
+                        .descriptions(descriptions),
+                ))
+            }
+        }
+
+        deserializer.deserialize_struct("GoogleBooksMinimal", FIELDS, GoogleBooksMinimalVisitor)
+    }
+}
 
 #[derive(Debug, Default)]
 pub struct GoogleBooks(Metadata);
@@ -331,6 +534,21 @@ mod test {
 
     #[tokio::test]
     async fn parses_from_isbn() {
+        use super::GoogleBooks;
+        use isbn::Isbn;
+        use log::info;
+        use std::str::FromStr;
+
+        init_logger();
+
+        let isbn = Isbn::from_str("9781534431003").unwrap();
+        let resp = GoogleBooks::from_isbn(&isbn).await;
+        info!("Response: {:#?}", resp);
+        assert!(resp.is_ok())
+    }
+
+    #[tokio::test]
+    async fn parses_minimal_from_isbn() {
         use super::GoogleBooks;
         use isbn::Isbn;
         use log::info;
