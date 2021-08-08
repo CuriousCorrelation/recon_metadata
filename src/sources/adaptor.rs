@@ -22,7 +22,7 @@ JSON -> Serde return type should be `Option< ... >`
 Serde -> Metadata almost always `Option<Result< ... , ... >>`
 */
 
-use crate::interface::recon::ReconError;
+use crate::recon::ReconError;
 use chrono::{NaiveDate, ParseResult};
 use isbn::Isbn;
 use log::debug;

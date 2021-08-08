@@ -1,8 +1,5 @@
 use crate::sources::adaptor;
-use crate::{
-    interface::recon::ReconError,
-    types::{metadata::Metadata, minimal::Minimal},
-};
+use crate::{recon::ReconError, types::metadata::Metadata};
 use chrono::NaiveDate;
 use core::fmt;
 use isbn::Isbn;
