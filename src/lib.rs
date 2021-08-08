@@ -1,3 +1,9 @@
+//#![warn(missing_docs)]
+//#![warn(clippy::all)]
+//#![warn(missing_debug_implementations)]
+//#![warn(missing_debug_implementations)]
+//#![feature(result_flattening)]
+
 /*!
 # Usage
 
@@ -40,7 +46,7 @@ async fn main() {
 
 */
 
-pub mod interface;
+pub mod recon;
 pub mod sources;
 pub mod types;
 
