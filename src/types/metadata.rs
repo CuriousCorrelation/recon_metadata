@@ -1,47 +1,35 @@
 use super::base;
 use log::debug;
 
-#[derive(Debug, Default)]
-
-/// [`Metadata`] type provides additional debugrmation to [`Minimal`]'s essential base.
+/// [`Metadata`] type contains information uniquely identify a book.
 /// [`Metadata`] contains the following:
-/// 1. (Certain) ISBN-10 and/or ISBN-13
-/// 2. (Certain) Title(s)
-/// 3. (Certain) Author(s) [Can be "unknown"]
-/// 4. (Probable) Description
-/// 5. (Probable) Publisher(s)
-/// 6. (Probable) Publication Date(s)
-/// 7. (Probable) Language
-/// 8. (Probable) Number of pages
-/// 9. (Probable) Cover image
+/// 1. ISBN-10 and/or ISBN-13
+/// 2. Title(s)
+/// 3. Author(s) [Can be "unknown"]
+/// 4. Description
+/// 5. Number of pages
+///
+/// [`Metadata`] can also fetch some additional information like:
+/// 1. Publisher(s)
+/// 2. Publication Date(s)
+/// 3. Language
+/// 4. Cover image
+#[derive(Debug, Default)]
 pub struct Metadata {
-    // `isbns` is built from a [`Vec`] of
-    // [ISBN](https://en.wikipedia.org/wiki/International_Standard_Book_Number).
-    isbns:             base::ISBNs,
-    // `titles` is built from a [`Vec`] of book titles.
-    // A book can have multiple titles depending on translations
-    // or way of writing e.g. "Book", "Book #1", "Series Name, Book #1", etc.
-    titles:            base::Titles,
-    // `titles` is built from a [`Vec`] of book authors.
-    authors:           base::Authors,
-    // `description` is a short description for the book.
-    descriptions:      base::Descriptions,
-    // `publishers` is built from a [`Vec`] of book publishers.
+    isbns:        base::ISBNs,
+    titles:       base::Titles,
+    authors:      base::Authors,
+    descriptions: base::Descriptions,
+    page_count:   base::PageCount,
+    extra:        self::Extra,
+}
+
+#[derive(Debug, Default)]
+pub struct Extra {
     publishers:        base::Publishers,
-    // `publisher_dates` is built from a [`Vec`] of book's publication dates.
-    // A book can have multiple publication dates depening on publication rights
-    // and individual publisher or publishing houses.
     publication_dates: base::PublicationDates,
-    // `languages` refers to the number of languages the book is published in.
     languages:         base::Languages,
-    // `page_count` is the number of pages the book has.
-    // A book can have different number of pages depending on the type of book.
-    // e.g. paperback, hardcover, e-book (different formats), etc.
-    page_count:        base::PageCount,
-    // `tags` are the book subjects and/or book genre.
     tags:              base::Tags,
-    // `cover_images/` is build from a [`Vec`] of URLs of book cover images
-    // of different sizes and formats.
     cover_images:      base::CoverImages,
 }
 
@@ -70,42 +58,48 @@ impl Metadata {
         self
     }
 
-    pub fn publishers(mut self, publishers: base::Publishers) -> Self {
-        self.publishers = publishers;
-        debug!("Field `publishers` is set to: {:#?}", self.publishers);
-        self
-    }
-
-    pub fn publication_dates(mut self, publication_dates: base::PublicationDates) -> Self {
-        self.publication_dates = publication_dates;
-        debug!(
-            "Field `publication_dates` is set to: {:#?}",
-            self.publication_dates
-        );
-        self
-    }
-
-    pub fn languages(mut self, languages: base::Languages) -> Self {
-        self.languages = languages;
-        debug!("Field `languages` is set to: {:#?}", self.languages);
-        self
-    }
-
     pub fn page_count(mut self, page_count: base::PageCount) -> Self {
         self.page_count = page_count;
         debug!("Field `page_count` is set to: {:#?}", self.page_count);
         self
     }
 
+    pub fn publishers(mut self, publishers: base::Publishers) -> Self {
+        self.extra.publishers = publishers;
+        debug!("Field `publishers` is set to: {:#?}", self.extra.publishers);
+        self
+    }
+
+    pub fn publication_dates(mut self, publication_dates: base::PublicationDates) -> Self {
+        self.extra.publication_dates = publication_dates;
+        debug!(
+            "Field `extra.publication_dates` is set to: {:#?}",
+            self.extra.publication_dates
+        );
+        self
+    }
+
+    pub fn languages(mut self, languages: base::Languages) -> Self {
+        self.extra.languages = languages;
+        debug!(
+            "Field `extra.languages` is set to: {:#?}",
+            self.extra.languages
+        );
+        self
+    }
+
     pub fn tags(mut self, tags: base::Tags) -> Self {
-        self.tags = tags;
-        debug!("Field `tags` is set to: {:#?}", self.tags);
+        self.extra.tags = tags;
+        debug!("Field `extra.tags` is set to: {:#?}", self.extra.tags);
         self
     }
 
     pub fn cover_images(mut self, cover_images: base::CoverImages) -> Self {
-        self.cover_images = cover_images;
-        debug!("Field `cover_images` is set to: {:#?}", self.cover_images);
+        self.extra.cover_images = cover_images;
+        debug!(
+            "Field `extra.cover_images` is set to: {:#?}",
+            self.extra.cover_images
+        );
         self
     }
 }
