@@ -94,7 +94,7 @@ where
                 match key {
                     Field::Title => {
                         if title.is_some() {
-                            return Err(ReconError::JSONParse { field1: de::Error::duplicate_field("title") })
+                            return Err(ReconError::JSONParse(de::Error::duplicate_field("title")))
                                 .map_err(V::Error::custom);
                         }
                         title = adaptor::parse_string(map.next_value()?);
@@ -102,9 +102,9 @@ where
 
                     Field::IndustryIdentifiers => {
                         if isbn.is_some() {
-                            return Err(ReconError::JSONParse { field1: de::Error::duplicate_field(
+                            return Err(ReconError::JSONParse(de::Error::duplicate_field(
                                 "industryIdentifiers",
-                            ) })
+                            )))
                             .map_err(V::Error::custom);
                         }
                         isbn = adaptor::parse_google_books_isbn(map.next_value()?);
@@ -112,9 +112,9 @@ where
 
                     Field::Authors => {
                         if authors.is_some() {
-                            return Err(ReconError::JSONParse { field1: de::Error::duplicate_field(
+                            return Err(ReconError::JSONParse(de::Error::duplicate_field(
                                 "authors",
-                            ) })
+                            )))
                             .map_err(V::Error::custom);
                         }
                         authors = adaptor::parse_vec(map.next_value()?);
@@ -122,9 +122,9 @@ where
 
                     Field::Description => {
                         if description.is_some() {
-                            return Err(ReconError::JSONParse { field1: de::Error::duplicate_field(
+                            return Err(ReconError::JSONParse(de::Error::duplicate_field(
                                 "description",
-                            ) })
+                            )))
                             .map_err(V::Error::custom);
                         }
                         description = adaptor::parse_string(map.next_value()?);
@@ -132,9 +132,9 @@ where
 
                     Field::PageCount => {
                         if page_count.is_some() {
-                            return Err(ReconError::JSONParse { field1: de::Error::duplicate_field(
+                            return Err(ReconError::JSONParse(de::Error::duplicate_field(
                                 "page_count",
-                            ) })
+                            )))
                             .map_err(V::Error::custom);
                         }
                         page_count = adaptor::parse_page_count(map.next_value()?);
@@ -300,7 +300,7 @@ where
                 match key {
                     Field::Title => {
                         if title.is_some() {
-                            return Err(ReconError::JSONParse { field1: de::Error::duplicate_field("title") })
+                            return Err(ReconError::JSONParse(de::Error::duplicate_field("title")))
                                 .map_err(V::Error::custom);
                         }
                         title = adaptor::parse_string(map.next_value()?);
@@ -308,9 +308,9 @@ where
 
                     Field::IndustryIdentifiers => {
                         if isbn.is_some() {
-                            return Err(ReconError::JSONParse { field1: de::Error::duplicate_field(
+                            return Err(ReconError::JSONParse(de::Error::duplicate_field(
                                 "industryIdentifiers",
-                            ) })
+                            )))
                             .map_err(V::Error::custom);
                         }
                         isbn = adaptor::parse_google_books_isbn(map.next_value()?);
@@ -318,9 +318,9 @@ where
 
                     Field::Authors => {
                         if authors.is_some() {
-                            return Err(ReconError::JSONParse { field1: de::Error::duplicate_field(
+                            return Err(ReconError::JSONParse(de::Error::duplicate_field(
                                 "authors",
-                            ) })
+                            )))
                             .map_err(V::Error::custom);
                         }
                         authors = adaptor::parse_vec(map.next_value()?);
@@ -328,9 +328,9 @@ where
 
                     Field::Description => {
                         if description.is_some() {
-                            return Err(ReconError::JSONParse { field1: de::Error::duplicate_field(
+                            return Err(ReconError::JSONParse(de::Error::duplicate_field(
                                 "description",
-                            ) })
+                            )))
                             .map_err(V::Error::custom);
                         }
                         description = adaptor::parse_string(map.next_value()?);
@@ -338,9 +338,9 @@ where
 
                     Field::Publisher => {
                         if publisher.is_some() {
-                            return Err(ReconError::JSONParse { field1: de::Error::duplicate_field(
+                            return Err(ReconError::JSONParse(de::Error::duplicate_field(
                                 "publisher",
-                            ) })
+                            )))
                             .map_err(V::Error::custom);
                         }
                         publisher = adaptor::parse_string(map.next_value()?);
@@ -348,9 +348,9 @@ where
 
                     Field::PublishedDate => {
                         if published_date.is_some() {
-                            return Err(ReconError::JSONParse { field1: de::Error::duplicate_field(
+                            return Err(ReconError::JSONParse(de::Error::duplicate_field(
                                 "publishedDate",
-                            ) })
+                            )))
                             .map_err(V::Error::custom);
                         }
                         published_date = adaptor::parse_published_date(map.next_value()?);
@@ -358,9 +358,9 @@ where
 
                     Field::Language => {
                         if language.is_some() {
-                            return Err(ReconError::JSONParse { field1: de::Error::duplicate_field(
+                            return Err(ReconError::JSONParse(de::Error::duplicate_field(
                                 "language",
-                            ) })
+                            )))
                             .map_err(V::Error::custom);
                         }
                         language = adaptor::parse_string(map.next_value()?);
@@ -368,9 +368,9 @@ where
 
                     Field::PageCount => {
                         if page_count.is_some() {
-                            return Err(ReconError::JSONParse { field1: de::Error::duplicate_field(
+                            return Err(ReconError::JSONParse(de::Error::duplicate_field(
                                 "page_count",
-                            ) })
+                            )))
                             .map_err(V::Error::custom);
                         }
                         page_count = adaptor::parse_page_count(map.next_value()?);
@@ -378,9 +378,9 @@ where
 
                     Field::Categories => {
                         if categories.is_some() {
-                            return Err(ReconError::JSONParse { field1: de::Error::duplicate_field(
+                            return Err(ReconError::JSONParse(de::Error::duplicate_field(
                                 "categories",
-                            ) })
+                            )))
                             .map_err(V::Error::custom);
                         }
                         categories = adaptor::parse_vec(map.next_value()?);
@@ -388,9 +388,9 @@ where
 
                     Field::ImageLinks => {
                         if image_links.is_some() {
-                            return Err(ReconError::JSONParse { field1: de::Error::duplicate_field(
+                            return Err(ReconError::JSONParse(de::Error::duplicate_field(
                                 "imageLinks",
-                            ) })
+                            )))
                             .map_err(V::Error::custom);
                         }
                         image_links = adaptor::parse_image_links(map.next_value()?);
