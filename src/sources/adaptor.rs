@@ -1,13 +1,6 @@
-/*! Apator functions
-Functions named after fields such as `parse_number_of_pages`
-are unique function that isn't used by any other field.
+/*! Transforms API response by `serde` into `Metadata` elements.
 
-Generic function such as `parse_string` are used by multiple fields.
-
-API specific function essentially do similar things but for different JSON structures.
-`parse_google_books_isbn` vs `parse_open_library_isbn`
-
-These functions are responsible for converting JSON field
+Functions responsible for converting JSON field
 into corrosponding serde type
 and those serde types into `Self`.
 Essentially JSON -> Serde -> Metadata
@@ -20,15 +13,29 @@ Serde -> Metadata is `| string | -> Some(Ok(string))`
 
 JSON -> Serde return type should be `Option< ... >`
 Serde -> Metadata almost always `Option<Result< ... , ... >>`
+
+Functions named after fields such as `parse_number_of_pages`
+are unique functions not used by any other field.
+
+Generic function such as `parse_string` may be used to parse many different fields.
+
+API specific function essentially do similar things but for different JSON structures.
+`parse_google_books_isbn` vs `parse_open_library_isbn`
 */
 
-use crate::recon::ReconError;
+use crate::{
+    recon::ReconError,
+    types::base::{self, Numeric},
+};
 use chrono::{NaiveDate, ParseResult};
 use isbn::Isbn;
 use log::debug;
 use std::{collections::HashMap, str::FromStr};
 
-pub(crate) fn parse_string(string: String) -> Option<Result<String, ReconError>> {
+/// Transforms [`String`] type into [`base::Generic`]
+///
+/// Essentially a wrapper around [`String`] type
+pub(crate) fn parse_string(string: String) -> Option<base::Generic> {
     debug!(
         "`fn parse_string` arg(s) `string` is: {:#?}, expecting `String`",
         string
@@ -37,61 +44,10 @@ pub(crate) fn parse_string(string: String) -> Option<Result<String, ReconError>>
     Some(Ok(string))
 }
 
-pub(crate) fn parse_languages(
-    languages: Vec<HashMap<String, String>>,
-) -> Option<Vec<Result<String, ReconError>>> {
-    debug!(
-        "`fn parse_languages` arg(s) `languages` is: {:#?}, expecting `Vec<HashMap<String, String>>,
-`",
-        languages
-    );
-
-    Some(
-        languages
-            .into_iter()
-            .map(|h| {
-                h.into_iter()
-                    .map(|(_, mut v)| {
-                        Ok(
-                            v.split_off(v.len() - 3), // "/language/eng" -> "eng"
-                        )
-                    })
-                    .collect::<Vec<Result<String, ReconError>>>()
-            })
-            .flatten()
-            .collect::<Vec<Result<String, ReconError>>>(),
-    )
-}
-
-pub(crate) fn parse_covers(covers: Vec<u32>) -> Option<Vec<Result<String, ReconError>>> {
-    debug!(
-        "`fn parse_covers` arg(s) `covers` is: {:#?}, expecting `Vec<u32>`",
-        covers
-    );
-
-    let possible_sizes = ["S", "M", "L"];
-
-    Some(
-        covers
-            .into_iter()
-            .map(|cover: u32| {
-                possible_sizes
-                    .iter()
-                    .map(|size| {
-                        Ok(format!(
-                            "https://covers.openlibrary.org/b/id/{}-{}.jpg",
-                            cover.to_string(),
-                            size
-                        ))
-                    })
-                    .collect::<Vec<Result<String, ReconError>>>()
-            })
-            .flatten()
-            .collect::<Vec<Result<String, ReconError>>>(),
-    )
-}
-
-pub(crate) fn parse_number_of_pages(number_of_pages: u16) -> Option<Result<u16, ReconError>> {
+/// Transforms [`u16`] type into [`base::Numeric`]
+///
+/// Essentially a wrapper around [`u16`] type
+pub(crate) fn parse_number_of_pages(number_of_pages: u16) -> Option<Numeric> {
     debug!(
         "`fn parse_number_of_pages` arg(s) `number_of_pages` is: {:#?}, expecting `u16`",
         number_of_pages
@@ -100,9 +56,15 @@ pub(crate) fn parse_number_of_pages(number_of_pages: u16) -> Option<Result<u16, 
     Some(Ok(number_of_pages))
 }
 
-pub(crate) fn parse_publish_date(
-    publish_date: Option<String>,
-) -> Option<Result<NaiveDate, ReconError>> {
+/// Transforms [`crate::source::OpenLibrary`] source's "publish_date" key value into [`base::Date`]
+///
+/// Objects can have varying formats.
+/// ```
+/// "2011"
+/// "March 2009"
+/// "July 16, 2019"
+/// ```
+pub(crate) fn parse_publish_date(publish_date: Option<String>) -> Option<base::Date> {
     debug!(
         "`fn parse_publish_date` arg(s) `publish_date` is: {:#?}, expecting `String`",
         publish_date
@@ -122,7 +84,8 @@ pub(crate) fn parse_publish_date(
     possible_formats.map(|r| r.map_err(ReconError::DateParse))
 }
 
-pub(crate) fn parse_vec(vecs: Vec<String>) -> Option<Vec<Result<String, ReconError>>> {
+/// Transforms [`Vec<String>`] into [`base::Generic`]
+pub(crate) fn parse_vec(vecs: Vec<String>) -> Option<Vec<base::Generic>> {
     debug!(
         "`fn parse_vec` arg(s) `vecs` is: {:#?}, expecting `Vec<String>`",
         vecs
@@ -162,6 +125,23 @@ pub(crate) fn parse_image_links(
 
     Some(
         image_links
+            .into_iter()
+            .map(|(_, v)| Ok(v))
+            .collect::<Vec<Result<String, ReconError>>>(),
+    )
+}
+
+pub(crate) fn parse_hashmap(
+    hashmap: HashMap<String, String>,
+) -> Option<Vec<Result<String, ReconError>>> {
+    debug!(
+        "`fn parse_hashmap` arg(s) `hashmap` is: {:#?}, expecting `HashMap<String, String>,
+`",
+        hashmap
+    );
+
+    Some(
+        hashmap
             .into_iter()
             .map(|(_, v)| Ok(v))
             .collect::<Vec<Result<String, ReconError>>>(),
