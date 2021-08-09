@@ -1,4 +1,10 @@
+use crate::{
+    recon::{ReconError, ReconSetup},
+    sources::{google_books::GoogleBooks, open_library::OpenLibrary},
+};
+
 use super::base;
+use isbn::Isbn;
 use log::debug;
 
 /// [`Metadata`] type contains information uniquely identify a book.
@@ -32,6 +38,9 @@ pub struct Extra {
     tags:              base::Tags,
     cover_images:      base::CoverImages,
 }
+
+/// A type synonym for `Result<Vec<Metadata>, ReconError>`
+pub type ReconResult = Result<Vec<Metadata>, ReconError>;
 
 impl Metadata {
     pub fn isbns(mut self, isbns: base::ISBNs) -> Self {
@@ -101,5 +110,29 @@ impl Metadata {
             self.extra.cover_images
         );
         self
+    }
+}
+
+impl Metadata {
+    pub async fn from_isbn(recon_setup: &ReconSetup, isbn: &Isbn) -> ReconResult {
+        use crate::recon::SearchProvider;
+
+        match recon_setup.search_provider {
+            SearchProvider::GoogleBooks => GoogleBooks::from_isbn(isbn).await,
+            SearchProvider::OpenLibrary => OpenLibrary::from_isbn(isbn).await,
+            SearchProvider::Amazon => unimplemented!(),
+            SearchProvider::Goodreads => unimplemented!(),
+        }
+    }
+
+    pub async fn from_isbn_extra(recon_setup: &ReconSetup, isbn: &Isbn) -> ReconResult {
+        use crate::recon::SearchProvider;
+
+        match recon_setup.search_provider {
+            SearchProvider::GoogleBooks => GoogleBooks::from_isbn_extra(isbn).await,
+            SearchProvider::OpenLibrary => OpenLibrary::from_isbn_extra(isbn).await,
+            SearchProvider::Amazon => unimplemented!(),
+            SearchProvider::Goodreads => unimplemented!(),
+        }
     }
 }
