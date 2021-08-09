@@ -226,24 +226,23 @@ pub(crate) fn parse_authors(
     })
 }
 
-pub(crate) fn parse_works(
-    works: Vec<HashMap<String, String>>,
+pub(crate) fn parse_vec_hashmap_field(
+    vec_hashmap: Option<Vec<HashMap<String, String>>>,
+    field: &str,
 ) -> Option<Vec<Result<String, ReconError>>> {
     debug!(
-        "`fn parse_works` arg(s) `works` is: {:#?}, expecting `Option<Vec<HashMap<String, String>>>,
-`",
-        works
+        "`fn parse_vec_hashmap` arg(s) `vec_hashmap` is: {:#?}, expecting `Option<Vec<HashMap<String, String>>>,
+`, `field` is: {:#?}",
+        vec_hashmap,
+        field
     );
 
-    Some(
-        works
+    vec_hashmap.map(|vec_hashmap| {
+        vec_hashmap
             .into_iter()
-            .map(|h| {
-                h.into_iter()
-                    .map(|(_, v)| Ok(v))
-                    .collect::<Vec<Result<String, ReconError>>>()
-            })
+            .map(|mut h| h.remove(field))
             .flatten()
-            .collect::<Vec<Result<String, ReconError>>>(),
-    )
+            .map(Ok)
+            .collect::<Vec<Result<String, ReconError>>>()
+    })
 }
