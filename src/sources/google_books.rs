@@ -12,6 +12,44 @@ use serde::{
 #[derive(Debug)]
 pub struct GoogleBooks(Metadata);
 
+impl GoogleBooks {
+    pub async fn from_isbn(isbn: &isbn::Isbn, extra: bool) -> Result<Vec<Metadata>, ReconError> {
+        let req = format!(
+            "https://www.googleapis.com/books/v1/volumes?q=isbn:{}",
+            urlencoding::encode(&isbn.to_string())
+        );
+
+        debug!("ISBN: {:#?}", &isbn);
+        debug!("Request: {:#?}", &req);
+
+        #[derive(Debug, Deserialize)]
+        struct Items {
+            items: Vec<VolumeInfo>,
+        }
+
+        #[derive(Debug, Deserialize)]
+        struct VolumeInfo {
+            #[serde(rename = "volumeInfo", deserialize_with = "deserialize")]
+            volume_info: Metadata,
+        }
+
+        let response = reqwest::get(req)
+            .await
+            .map_err(ReconError::Connection)?
+            .json::<Items>()
+            .await
+            .map_err(ReconError::Connection)?;
+
+        debug!("Response: {:#?}", &response);
+
+        Ok(response
+            .items
+            .into_iter()
+            .map(|v| v.volume_info)
+            .collect::<Vec<Metadata>>())
+    }
+}
+
 fn deserialize<'de, D>(deserializer: D) -> Result<Metadata, D::Error>
 where
     D: Deserializer<'de>,
@@ -481,80 +519,6 @@ where
     deserializer.deserialize_struct("Metadata", FIELDS, MetadataVisitor)
 }
 
-impl GoogleBooks {
-    pub async fn from_isbn_minimal(isbn: &isbn::Isbn) -> Result<Vec<Self>, ReconError> {
-        let req = format!(
-            "https://www.googleapis.com/books/v1/volumes?q=isbn:{}",
-            urlencoding::encode(&isbn.to_string())
-        );
-
-        debug!("ISBN: {:#?}", &isbn);
-        debug!("Request: {:#?}", &req);
-
-        #[derive(Debug, Deserialize)]
-        struct Items {
-            items: Vec<VolumeInfo>,
-        }
-
-        #[derive(Debug, Deserialize)]
-        struct VolumeInfo {
-            #[serde(rename = "volumeInfo", deserialize_with = "deserialize")]
-            volume_info: Metadata,
-        }
-
-        let response = reqwest::get(req)
-            .await
-            .map_err(ReconError::Connection)?
-            .json::<Items>()
-            .await
-            .map_err(ReconError::Connection)?;
-
-        debug!("Response: {:#?}", &response);
-
-        Ok(response
-            .items
-            .into_iter()
-            .map(|v| GoogleBooks(v.volume_info))
-            .collect::<Vec<Self>>())
-    }
-
-    pub async fn from_isbn(isbn: &isbn::Isbn) -> Result<Vec<Self>, ReconError> {
-        let req = format!(
-            "https://www.googleapis.com/books/v1/volumes?q=isbn:{}",
-            urlencoding::encode(&isbn.to_string())
-        );
-
-        debug!("ISBN: {:#?}", &isbn);
-        debug!("Request: {:#?}", &req);
-
-        #[derive(Debug, Deserialize)]
-        struct Items {
-            items: Vec<VolumeInfo>,
-        }
-
-        #[derive(Debug, Deserialize)]
-        struct VolumeInfo {
-            #[serde(rename = "volumeInfo", deserialize_with = "deserialize_extra")]
-            volume_info: Metadata,
-        }
-
-        let response = reqwest::get(req)
-            .await
-            .map_err(ReconError::Connection)?
-            .json::<Items>()
-            .await
-            .map_err(ReconError::Connection)?;
-
-        debug!("Response: {:#?}", &response);
-
-        Ok(response
-            .items
-            .into_iter()
-            .map(|v| GoogleBooks(v.volume_info))
-            .collect::<Vec<Self>>())
-    }
-}
-
 #[cfg(test)]
 mod test {
     fn init_logger() {
@@ -577,7 +541,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn parses_minimal_from_isbn() {
+    async fn parses_extra_from_isbn() {
         use super::GoogleBooks;
         use isbn::Isbn;
         use log::debug;
@@ -586,7 +550,7 @@ mod test {
         init_logger();
 
         let isbn = Isbn::from_str("9781534431003").unwrap();
-        let resp = GoogleBooks::from_isbn_minimal(&isbn).await;
+        let resp = GoogleBooks::from_isbn_extra(&isbn).await;
         debug!("Response: {:#?}", resp);
         assert!(resp.is_ok())
     }
