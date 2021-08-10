@@ -135,20 +135,11 @@ impl Metadata {
 
     /// A simple `Isbn` search that'll use only one provider defined by
     /// [`ReconSetup`].
-    pub async fn from_isbn(database: &Database, isbn: &Isbn) -> ReconResult {
-        match database {
-            Database::GoogleBooks => GoogleBooks::from_isbn(isbn).await,
-            Database::OpenLibrary => OpenLibrary::from_isbn(isbn).await,
-            Database::Amazon => unimplemented!(),
-            Database::Goodreads => unimplemented!(),
-        }
-    }
-
     /// An eclectic / diversified / exaustive search that'll use search provider
     /// for initial information and fill in the blacks making expensive calls
     /// but returning almost complete information about the book
-    /// provides by the sources defined by [`ReconSetup`].
-    pub async fn from_isbn_eclectic(source: &Source, isbn: &Isbn) -> ReconResult {
+    /// provides by the sources defined by [`Source`].
+    pub async fn from_isbn(source: &Source, isbn: &Isbn) -> ReconResult {
         let database_list: &HashSet<Database> = &source.0;
 
         let mut metadata = Metadata::default();
@@ -169,25 +160,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn parses_from_isbn_single_database() {
-        use super::Metadata;
-        use crate::recon::Database;
-        use isbn::Isbn;
-        use log::debug;
-        use std::str::FromStr;
-
-        init_logger();
-
-        let isbn = Isbn::from_str("9781534431003").unwrap();
-        let res = Metadata::from_isbn(&Database::GoogleBooks, &isbn).await;
-
-        debug!("Response: {:#?}", res);
-
-        assert!(res.is_ok());
-    }
-
-    #[tokio::test]
-    async fn parses_from_isbn_multiple_database() {
+    async fn parses_from_isbn() {
         use super::Metadata;
         use crate::metadata::ReconResult;
         use crate::recon::Database;
@@ -203,7 +176,7 @@ mod test {
             .source(Database::GoogleBooks)
             .source(Database::OpenLibrary);
 
-        let res: ReconResult = Metadata::from_isbn_eclectic(&source, &isbn).await;
+        let res: ReconResult = Metadata::from_isbn(&source, &isbn).await;
 
         println!("Response: {:#?}", res);
         assert!(res.is_ok());
