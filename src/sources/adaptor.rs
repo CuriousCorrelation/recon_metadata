@@ -70,18 +70,19 @@ pub(crate) fn parse_publish_date(publish_date: Option<String>) -> Option<base::D
         publish_date
     );
 
-    let possible_formats = ["%Y", "%B %Y", "%B, %d %Y", "%Y-%m-%d"]
-        .iter_mut()
-        .map(|fmt| {
-            publish_date
-                .as_ref()
-                .map(|publish_date| NaiveDate::parse_from_str(publish_date, fmt))
-        })
-        .flatten()
-        .collect::<Vec<ParseResult<NaiveDate>>>()
-        .pop();
+    // Possible format only include complete dates.
+    let possible_formats = ["%B %d, %Y", "%Y-%m-%d", "%B, %d %Y"];
 
-    possible_formats.map(|r| r.map_err(ReconError::DateParse))
+    match publish_date {
+        Some(s) => possible_formats
+            .iter()
+            .map(|fmt| NaiveDate::parse_from_str(&s, fmt))
+            .filter(|date| date.is_ok())
+            .map(|date| date.map_err(ReconError::DateParse))
+            .collect::<Vec<base::Date>>()
+            .pop(),
+        None => None,
+    }
 }
 
 /// Transforms [`Vec<String>`] into [`base::Generic`]
