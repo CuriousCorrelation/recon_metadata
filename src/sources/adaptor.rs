@@ -227,3 +227,22 @@ pub(crate) fn parse_vec_hashmap_field(
             .collect::<Vec<Result<String, ReconError>>>()
     })
 }
+
+pub(crate) fn parse_open_library_identifiers(
+    hashmap_vec: HashMap<String, Vec<String>>,
+) -> Option<ISBNs> {
+    debug!(
+        "`fn parse_open_library_identifiers` arg(s) `hashmap_vec` is: {:#?}, expecting `HashMap<String, Vec<String>>`",
+        hashmap_vec
+        );
+
+    Some(
+        hashmap_vec
+            .into_iter()
+            .filter(|(k, _)| k == "isbn_10" || k == "isbn_13")
+            .map(|(_, v)| v)
+            .flatten()
+            .map(|isbn| Isbn::from_str(&isbn).map_err(ReconError::ISBNParse))
+            .collect(),
+    )
+}
