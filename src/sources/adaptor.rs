@@ -25,9 +25,9 @@ API specific function essentially do similar things but for different JSON struc
 
 use crate::{
     recon::ReconError,
-    types::base::{self, Numeric},
+    types::base::{self, ISBNs, Numeric},
 };
-use chrono::{NaiveDate, ParseResult};
+use chrono::NaiveDate;
 use isbn::Isbn;
 use log::debug;
 use std::{collections::HashMap, str::FromStr};
