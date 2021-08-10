@@ -1,8 +1,11 @@
+use crate::recon::ReconError;
 use crate::sources::adaptor;
-use crate::{recon::ReconError, types::metadata::Metadata};
-use chrono::NaiveDate;
+use crate::types::base::{
+    Authors, CoverImages, Descriptions, Languages, PageCount, PublicationDates, Publishers, Tags,
+    Titles,
+};
+use crate::{metadata::Metadata, types::base::ISBNs};
 use core::fmt;
-use isbn::Isbn;
 use log::debug;
 use serde::{
     de::{self, Error, MapAccess, Visitor},
@@ -13,7 +16,7 @@ use serde::{
 pub struct OpenLibrary(Metadata);
 
 impl OpenLibrary {
-    pub async fn from_isbn(isbn: &isbn::Isbn) -> Result<Vec<Metadata>, ReconError> {
+    pub async fn from_isbn(isbn: &isbn::Isbn) -> Result<Metadata, ReconError> {
         let isbn_key = format!("ISBN:{}", urlencoding::encode(&isbn.to_string()));
         let req = format!(
             "https://openlibrary.org/api/books?bibkeys={}&jscmd=data&format=json",
@@ -35,10 +38,10 @@ impl OpenLibrary {
         #[derive(Debug, Deserialize)]
         struct ISBNResponse(#[serde(deserialize_with = "deserialize")] Metadata);
 
-        let ISBNResponse(details) =
+        let ISBNResponse(metadata) =
             serde_json::from_value(response[isbn_key].take()).map_err(ReconError::JSONParse)?;
 
-        Ok(vec![details])
+        Ok(metadata)
     }
 }
 
@@ -50,221 +53,10 @@ where
     enum Field {
         Title,
         Authors,
-        Description,
-        ISBN10,
-        ISBN13,
-        NumberOfPages,
-        Ignore,
-    }
-
-    const FIELDS: &[&str] = &[
-        "title",
-        "authors",
-        "description",
-        "isbn_10",
-        "isbn_13",
-        "number_of_pages",
-    ];
-
-    impl<'de> Deserialize<'de> for Field {
-        fn deserialize<D>(deserializer: D) -> Result<Field, D::Error>
-        where
-            D: Deserializer<'de>,
-        {
-            struct FieldVisitor;
-
-            impl<'de> Visitor<'de> for FieldVisitor {
-                type Value = Field;
-
-                fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                    formatter.write_str("Any of `Metadata` fields.")
-                }
-
-                fn visit_str<E>(self, value: &str) -> Result<Field, E>
-                where
-                    E: de::Error,
-                {
-                    match value {
-                        "title" => Ok(Field::Title),
-                        "authors" => Ok(Field::Authors),
-                        "description" => Ok(Field::Description),
-                        "isbn_10" => Ok(Field::ISBN10),
-                        "isbn_13" => Ok(Field::ISBN13),
-                        "number_of_pages" => Ok(Field::NumberOfPages),
-                        _ => Ok(Field::Ignore),
-                    }
-                }
-            }
-
-            deserializer.deserialize_identifier(FieldVisitor)
-        }
-    }
-
-    struct MetadataVisitor;
-
-    impl<'de> Visitor<'de> for MetadataVisitor {
-        type Value = Metadata;
-
-        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-            formatter.write_str("struct Metadata")
-        }
-
-        fn visit_map<V>(self, mut map: V) -> Result<Metadata, V::Error>
-        where
-            V: MapAccess<'de>,
-        {
-            let mut isbn_10 = None;
-            let mut isbn_13 = None;
-            let mut title = None;
-            let mut authors = None;
-            let mut number_of_pages = None;
-
-            while let Some(key) = map.next_key()? {
-                match key {
-                    Field::Title => {
-                        if title.is_some() {
-                            return Err(ReconError::JSONParse(de::Error::duplicate_field("title")))
-                                .map_err(V::Error::custom);
-                        }
-
-                        let value = map.next_value()?;
-
-                        debug!("`Field::Title` value is: {:#?}", value);
-                        title = adaptor::parse_string(value);
-                    }
-
-                    Field::ISBN10 => {
-                        if isbn_10.is_some() {
-                            return Err(ReconError::JSONParse(de::Error::duplicate_field(
-                                "isbn_10",
-                            )))
-                            .map_err(V::Error::custom);
-                        }
-
-                        let value = map.next_value()?;
-                        debug!("`Field::ISBN10` value is: {:#?}", value);
-                        isbn_10 = adaptor::parse_open_library_isbn(value);
-                    }
-
-                    Field::ISBN13 => {
-                        if isbn_13.is_some() {
-                            return Err(ReconError::JSONParse(de::Error::duplicate_field(
-                                "isbn_13",
-                            )))
-                            .map_err(V::Error::custom);
-                        }
-
-                        let value = map.next_value()?;
-                        debug!("`Field::ISBN13` value is: {:#?}", value);
-                        isbn_13 = adaptor::parse_open_library_isbn(value);
-                    }
-
-                    Field::Authors => {
-                        if authors.is_some() {
-                            return Err(ReconError::JSONParse(de::Error::duplicate_field(
-                                "authors",
-                            )))
-                            .map_err(V::Error::custom);
-                        }
-
-                        let value = map.next_value()?;
-                        debug!("`Field::Authors` value is: {:#?}", value);
-                        authors = adaptor::parse_authors(value);
-                    }
-
-                    Field::NumberOfPages => {
-                        if number_of_pages.is_some() {
-                            return Err(ReconError::JSONParse(de::Error::duplicate_field(
-                                "number_of_pages",
-                            )))
-                            .map_err(V::Error::custom);
-                        }
-
-                        let value = map.next_value()?;
-                        debug!("`Field::NumberOfPages` value is: {:#?}", value);
-                        number_of_pages = adaptor::parse_number_of_pages(value);
-                    }
-
-                    _ => {
-                        let _ = match V::next_value::<serde::de::IgnoredAny>(&mut map) {
-                            Ok(val) => val,
-                            Err(err) => {
-                                return Err(err);
-                            }
-                        };
-                    }
-                }
-            }
-
-            // These variable besides converting `Option` to `Result` with serde error
-            // convert singular into plural if required otherwise simply
-            // rename to preserve consistency in variable and method names.
-            // ```
-            //        ...
-            //       .titles(titles)
-            //        ...
-            //       .descriptions(descriptions)
-            //        ...
-            //       .publication_dates(publication_dates)
-            // ```
-            // Contrast between `publish_date` and `publication_dates`
-            // is to highlight `API` field name vs `Metadata` field name.
-            //
-            // Here `titles` is converting singular `title` into plural `titles`
-            // by wrapping `title` into a `Vec`.
-            //
-            // `isbns` is simply renaming the variable.
-            let title: Result<String, ReconError> =
-                title.ok_or_else(|| de::Error::missing_field("title"))?;
-            let titles: Vec<Result<String, ReconError>> = vec![title];
-
-            let authors = match authors {
-                Some(authors) => authors,
-                None => vec![],
-            };
-
-            let isbn_10: Vec<Result<Isbn, ReconError>> = match isbn_10 {
-                Some(isbn_10) => isbn_10,
-                None => vec![],
-            };
-
-            let isbn_13: Vec<Result<Isbn, ReconError>> = match isbn_13 {
-                Some(isbn_13) => isbn_13,
-                None => vec![],
-            };
-
-            let mut isbns = Vec::new();
-            isbns.extend(isbn_10);
-            isbns.extend(isbn_13);
-
-            let number_of_pages: Result<u16, ReconError> =
-                number_of_pages.ok_or_else(|| de::Error::missing_field("number_of_pages"))?;
-            let page_count: Vec<Result<u16, ReconError>> = vec![number_of_pages];
-
-            Ok(Metadata::default()
-                .titles(titles)
-                .isbns(isbns)
-                .authors(authors)
-                .page_count(page_count))
-        }
-    }
-
-    deserializer.deserialize_struct("Metadata", FIELDS, MetadataVisitor)
-}
-
-fn deserialize_extra<'de, D>(deserializer: D) -> Result<Metadata, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    #[derive(Debug)]
-    enum Field {
-        Title,
-        Authors,
         Publishers,
         PublishDate,
         Description,
-        ISBN10,
-        ISBN13,
+        Identifiers,
         NumberOfPages,
         Subjects,
         Cover,
@@ -276,10 +68,9 @@ where
         "title",
         "authors",
         "publishers",
-        "publishedDate",
+        "publish_date",
         "description",
-        "isbn_10",
-        "isbn_13",
+        "identifiers",
         "number_of_pages",
         "subjects",
         "cover",
@@ -308,10 +99,9 @@ where
                         "title" => Ok(Field::Title),
                         "authors" => Ok(Field::Authors),
                         "publishers" => Ok(Field::Publishers),
-                        "publishedDate" => Ok(Field::PublishDate),
+                        "publish_date" => Ok(Field::PublishDate),
                         "description" => Ok(Field::Description),
-                        "isbn_10" => Ok(Field::ISBN10),
-                        "isbn_13" => Ok(Field::ISBN13),
+                        "identifiers" => Ok(Field::Identifiers),
                         "number_of_pages" => Ok(Field::NumberOfPages),
                         "subjects" => Ok(Field::Subjects),
                         "cover" => Ok(Field::Cover),
@@ -338,8 +128,7 @@ where
         where
             V: MapAccess<'de>,
         {
-            let mut isbn_10 = None;
-            let mut isbn_13 = None;
+            let mut identifiers = None;
             let mut title = None;
             let mut authors = None;
             let mut description = None;
@@ -358,35 +147,18 @@ where
                                 .map_err(V::Error::custom);
                         }
 
-                        let value = map.next_value()?;
-                        debug!("`Field::Title` value is: {:#?}", value);
-                        title = adaptor::parse_string(value);
+                        title = adaptor::parse_string(map.next_value()?);
                     }
 
-                    Field::ISBN10 => {
-                        if isbn_10.is_some() {
+                    Field::Identifiers => {
+                        if identifiers.is_some() {
                             return Err(ReconError::JSONParse(de::Error::duplicate_field(
-                                "isbn_10",
+                                "identifiers",
                             )))
                             .map_err(V::Error::custom);
                         }
 
-                        let value = map.next_value()?;
-                        debug!("`Field::ISBN10` value is: {:#?}", value);
-                        isbn_10 = adaptor::parse_open_library_isbn(value);
-                    }
-
-                    Field::ISBN13 => {
-                        if isbn_13.is_some() {
-                            return Err(ReconError::JSONParse(de::Error::duplicate_field(
-                                "isbn_13",
-                            )))
-                            .map_err(V::Error::custom);
-                        }
-
-                        let value = map.next_value()?;
-                        debug!("`Field::ISBN13` value is: {:#?}", value);
-                        isbn_13 = adaptor::parse_open_library_isbn(value);
+                        identifiers = adaptor::parse_open_library_identifiers(map.next_value()?);
                     }
 
                     Field::Authors => {
@@ -397,9 +169,7 @@ where
                             .map_err(V::Error::custom);
                         }
 
-                        let value = map.next_value()?;
-                        debug!("`Field::Authors` value is: {:#?}", value);
-                        authors = adaptor::parse_authors(value);
+                        authors = adaptor::parse_authors(map.next_value()?);
                     }
 
                     Field::NumberOfPages => {
@@ -410,9 +180,7 @@ where
                             .map_err(V::Error::custom);
                         }
 
-                        let value = map.next_value()?;
-                        debug!("`Field::NumberOfPages` value is: {:#?}", value);
-                        number_of_pages = adaptor::parse_number_of_pages(value);
+                        number_of_pages = adaptor::parse_number_of_pages(map.next_value()?);
                     }
 
                     Field::Description => {
@@ -423,9 +191,7 @@ where
                             .map_err(V::Error::custom);
                         }
 
-                        let value = map.next_value()?;
-                        debug!("`Field::Description` value is: {:#?}", value);
-                        description = adaptor::parse_string(value);
+                        description = adaptor::parse_string(map.next_value()?);
                     }
 
                     Field::Publishers => {
@@ -436,9 +202,7 @@ where
                             .map_err(V::Error::custom);
                         }
 
-                        let value = map.next_value()?;
-                        debug!("`Field::Publishers` value is: {:#?}", value);
-                        publishers = adaptor::parse_vec_hashmap_field(value, "name");
+                        publishers = adaptor::parse_vec_hashmap_field(map.next_value()?, "name");
                     }
 
                     Field::PublishDate => {
@@ -449,9 +213,7 @@ where
                             .map_err(V::Error::custom);
                         }
 
-                        let value = map.next_value()?;
-                        debug!("`Field::PublishDate` value is: {:#?}", value);
-                        publish_date = adaptor::parse_publish_date(value);
+                        publish_date = adaptor::parse_publish_date(map.next_value()?);
                     }
 
                     Field::Languages => {
@@ -462,9 +224,7 @@ where
                             .map_err(V::Error::custom);
                         }
 
-                        let value = map.next_value()?;
-                        debug!("`Field::Languages` value is: {:#?}", value);
-                        languages = adaptor::parse_vec_hashmap_field(value, "name");
+                        languages = adaptor::parse_vec_hashmap_field(map.next_value()?, "name");
                     }
 
                     Field::Subjects => {
@@ -475,9 +235,7 @@ where
                             .map_err(V::Error::custom);
                         }
 
-                        let value = map.next_value()?;
-                        debug!("`Field::Subjects` value is: {:#?}", value);
-                        subjects = adaptor::parse_vec_hashmap_field(value, "name");
+                        subjects = adaptor::parse_vec_hashmap_field(map.next_value()?, "name");
                     }
 
                     Field::Cover => {
@@ -486,9 +244,7 @@ where
                                 .map_err(V::Error::custom);
                         }
 
-                        let value = map.next_value()?;
-                        debug!("`Field::Cover` value is: {:#?}", value);
-                        cover = adaptor::parse_hashmap(value);
+                        cover = adaptor::parse_hashmap(map.next_value()?);
                     }
 
                     _ => {
@@ -522,60 +278,47 @@ where
             // `isbns` is simply renaming the variable.
             let title: Result<String, ReconError> =
                 title.ok_or_else(|| de::Error::missing_field("title"))?;
-            let titles: Vec<Result<String, ReconError>> = vec![title];
+            let titles: Titles = vec![title];
 
-            let authors = match authors {
+            let authors: Authors = match authors {
                 Some(authors) => authors,
                 None => vec![],
             };
 
-            let isbn_10: Vec<Result<Isbn, ReconError>> = match isbn_10 {
-                Some(isbn_10) => isbn_10,
-                None => vec![],
-            };
+            let isbns: ISBNs =
+                identifiers.ok_or_else(|| de::Error::missing_field("identifiers"))?;
 
-            let isbn_13: Vec<Result<Isbn, ReconError>> = match isbn_13 {
-                Some(isbn_13) => isbn_13,
-                None => vec![],
-            };
-
-            let mut isbns = Vec::new();
-            isbns.extend(isbn_10);
-            isbns.extend(isbn_13);
-
-            let descriptions: Vec<Result<String, ReconError>> = match description {
+            let descriptions: Descriptions = match description {
                 Some(description) => vec![description],
                 None => vec![],
             };
 
-            let publishers: Vec<Result<String, ReconError>> =
+            let publishers: Publishers =
                 publishers.ok_or_else(|| de::Error::missing_field("publishers"))?;
 
-            let publication_dates: Vec<Result<NaiveDate, ReconError>> = match publish_date {
+            let publication_dates: PublicationDates = match publish_date {
                 Some(publish_date) => vec![publish_date],
                 None => vec![],
             };
 
-            let languages: Vec<Result<String, ReconError>> = match languages {
+            let languages: Languages = match languages {
                 Some(languages) => languages,
                 None => vec![],
             };
 
             let number_of_pages: Result<u16, ReconError> =
                 number_of_pages.ok_or_else(|| de::Error::missing_field("number_of_pages"))?;
-            let page_count: Vec<Result<u16, ReconError>> = vec![number_of_pages];
+            let page_count: PageCount = vec![number_of_pages];
 
-            let cover: Vec<Result<String, ReconError>> = match cover {
+            let cover_images: CoverImages = match cover {
                 Some(cover) => cover,
                 None => vec![],
             };
-            let cover_images: Vec<Result<String, ReconError>> = cover;
 
-            let subjects = match subjects {
+            let tags: Tags = match subjects {
                 Some(subjects) => subjects,
                 None => vec![],
             };
-            let tags: Vec<Result<String, ReconError>> = subjects;
 
             Ok(Metadata::default()
                 .titles(titles)
@@ -611,21 +354,6 @@ mod test {
 
         let isbn = Isbn::from_str("9781534431003").unwrap();
         let resp = OpenLibrary::from_isbn(&isbn).await;
-        info!("Response: {:#?}", resp);
-        assert!(resp.is_ok());
-    }
-
-    #[tokio::test]
-    async fn parses_extra_from_isbn() {
-        use super::OpenLibrary;
-        use isbn::Isbn;
-        use log::info;
-        use std::str::FromStr;
-
-        init_logger();
-
-        let isbn = Isbn::from_str("9781534431003").unwrap();
-        let resp = OpenLibrary::from_isbn_extra(&isbn).await;
         info!("Response: {:#?}", resp);
         assert!(resp.is_ok());
     }

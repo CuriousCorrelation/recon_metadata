@@ -1,5 +1,6 @@
+use crate::metadata::Metadata;
+use crate::recon::ReconError;
 use crate::sources::adaptor;
-use crate::{recon::ReconError, types::metadata::Metadata};
 use chrono::NaiveDate;
 use core::fmt;
 use isbn::Isbn;
@@ -13,7 +14,7 @@ use serde::{
 pub struct GoogleBooks(Metadata);
 
 impl GoogleBooks {
-    pub async fn from_isbn(isbn: &isbn::Isbn, extra: bool) -> Result<Vec<Metadata>, ReconError> {
+    pub async fn from_isbn(isbn: &isbn::Isbn) -> Result<Metadata, ReconError> {
         let req = format!(
             "https://www.googleapis.com/books/v1/volumes?q=isbn:{}",
             urlencoding::encode(&isbn.to_string())
@@ -42,203 +43,18 @@ impl GoogleBooks {
 
         debug!("Response: {:#?}", &response);
 
-        Ok(response
+        let metadata = response
             .items
             .into_iter()
             .map(|v| v.volume_info)
-            .collect::<Vec<Metadata>>())
+            .collect::<Vec<Metadata>>()
+            .remove(0);
+
+        Ok(metadata)
     }
 }
 
 fn deserialize<'de, D>(deserializer: D) -> Result<Metadata, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    #[derive(Debug)]
-    enum Field {
-        Title,
-        Authors,
-        Description,
-        IndustryIdentifiers,
-        Isbn,
-        PageCount,
-        Ignore,
-    }
-
-    const FIELDS: &[&str] = &[
-        "title",
-        "authors",
-        "description",
-        "industryIdentifiers",
-        "isbn",
-        "pageCount",
-    ];
-
-    impl<'de> Deserialize<'de> for Field {
-        fn deserialize<D>(deserializer: D) -> Result<Field, D::Error>
-        where
-            D: Deserializer<'de>,
-        {
-            struct FieldVisitor;
-
-            impl<'de> Visitor<'de> for FieldVisitor {
-                type Value = Field;
-
-                fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                    formatter.write_str("Any of `Metadata` fields.")
-                }
-
-                fn visit_str<E>(self, value: &str) -> Result<Field, E>
-                where
-                    E: de::Error,
-                {
-                    match value {
-                        "title" => Ok(Field::Title),
-                        "authors" => Ok(Field::Authors),
-                        "description" => Ok(Field::Description),
-                        "industryIdentifiers" => Ok(Field::IndustryIdentifiers),
-                        "identifier" => Ok(Field::Isbn),
-                        "pageCount" => Ok(Field::PageCount),
-                        _ => Ok(Field::Ignore),
-                    }
-                }
-            }
-
-            deserializer.deserialize_identifier(FieldVisitor)
-        }
-    }
-
-    struct MetadataVisitor;
-
-    impl<'de> Visitor<'de> for MetadataVisitor {
-        type Value = Metadata;
-
-        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-            formatter.write_str("struct Metadata")
-        }
-
-        fn visit_map<V>(self, mut map: V) -> Result<Metadata, V::Error>
-        where
-            V: MapAccess<'de>,
-        {
-            let mut isbn = None;
-            let mut title = None;
-            let mut authors = None;
-            let mut description = None;
-            let mut page_count = None;
-
-            while let Some(key) = map.next_key()? {
-                debug!("deserialize::visit_map key is: {:#?}", &key);
-                match key {
-                    Field::Title => {
-                        if title.is_some() {
-                            return Err(ReconError::JSONParse(de::Error::duplicate_field("title")))
-                                .map_err(V::Error::custom);
-                        }
-                        title = adaptor::parse_string(map.next_value()?);
-                    }
-
-                    Field::IndustryIdentifiers => {
-                        if isbn.is_some() {
-                            return Err(ReconError::JSONParse(de::Error::duplicate_field(
-                                "industryIdentifiers",
-                            )))
-                            .map_err(V::Error::custom);
-                        }
-                        isbn = adaptor::parse_google_books_isbn(map.next_value()?);
-                    }
-
-                    Field::Authors => {
-                        if authors.is_some() {
-                            return Err(ReconError::JSONParse(de::Error::duplicate_field(
-                                "authors",
-                            )))
-                            .map_err(V::Error::custom);
-                        }
-                        authors = adaptor::parse_vec(map.next_value()?);
-                    }
-
-                    Field::Description => {
-                        if description.is_some() {
-                            return Err(ReconError::JSONParse(de::Error::duplicate_field(
-                                "description",
-                            )))
-                            .map_err(V::Error::custom);
-                        }
-                        description = adaptor::parse_string(map.next_value()?);
-                    }
-
-                    Field::PageCount => {
-                        if page_count.is_some() {
-                            return Err(ReconError::JSONParse(de::Error::duplicate_field(
-                                "page_count",
-                            )))
-                            .map_err(V::Error::custom);
-                        }
-                        page_count = adaptor::parse_page_count(map.next_value()?);
-                    }
-
-                    _ => {
-                        let _ = match V::next_value::<serde::de::IgnoredAny>(&mut map) {
-                            Ok(val) => val,
-                            Err(err) => {
-                                return Err(err);
-                            }
-                        };
-                    }
-                }
-            }
-
-            // These variable besides converting `Option` to `Result` with serde error
-            // convert singular into plural if required otherwise simply
-            // rename to preserve consistency in variable and method names.
-            // ```
-            //        ...
-            //       .titles(titles)
-            //        ...
-            //       .descriptions(descriptions)
-            //        ...
-            //       .publication_dates(publication_dates)
-            // ```
-            // Contrast between `published_date` and `publication_dates`
-            // is to highlight `API` field name vs `Metadata` field name.
-            //
-            // Here `titles` is converting singular `title` into plural `titles`
-            // by wrapping `title` into a `Vec`.
-            //
-            // `isbns` is simply renaming the variable.
-            let title: Result<String, ReconError> =
-                title.ok_or_else(|| de::Error::missing_field("title"))?;
-            let titles: Vec<Result<String, ReconError>> = vec![title];
-
-            let authors: Vec<Result<String, ReconError>> =
-                authors.ok_or_else(|| de::Error::missing_field("authors"))?;
-
-            let isbn: Vec<Result<Isbn, ReconError>> =
-                isbn.ok_or_else(|| de::Error::missing_field("industryIdentifiers"))?;
-            let isbns = isbn;
-
-            let description: Result<String, ReconError> =
-                description.ok_or_else(|| de::Error::missing_field("description"))?;
-            let descriptions: Vec<Result<String, ReconError>> = vec![description];
-
-            let page_count: Result<u16, ReconError> =
-                page_count.ok_or_else(|| de::Error::missing_field("pageCount"))?;
-            let page_count: Vec<Result<u16, ReconError>> = vec![page_count];
-
-            Ok(Metadata::default()
-                .titles(titles)
-                .isbns(isbns)
-                .authors(authors)
-                .descriptions(descriptions)
-                .page_count(page_count))
-        }
-    }
-
-    deserializer.deserialize_struct("Metadata", FIELDS, MetadataVisitor)
-}
-
-fn deserialize_extra<'de, D>(deserializer: D) -> Result<Metadata, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -341,6 +157,7 @@ where
                             return Err(ReconError::JSONParse(de::Error::duplicate_field("title")))
                                 .map_err(V::Error::custom);
                         }
+
                         title = adaptor::parse_string(map.next_value()?);
                     }
 
@@ -351,6 +168,7 @@ where
                             )))
                             .map_err(V::Error::custom);
                         }
+
                         isbn = adaptor::parse_google_books_isbn(map.next_value()?);
                     }
 
@@ -361,6 +179,7 @@ where
                             )))
                             .map_err(V::Error::custom);
                         }
+
                         authors = adaptor::parse_vec(map.next_value()?);
                     }
 
@@ -371,6 +190,7 @@ where
                             )))
                             .map_err(V::Error::custom);
                         }
+
                         description = adaptor::parse_string(map.next_value()?);
                     }
 
@@ -381,6 +201,7 @@ where
                             )))
                             .map_err(V::Error::custom);
                         }
+
                         publisher = adaptor::parse_string(map.next_value()?);
                     }
 
@@ -391,6 +212,7 @@ where
                             )))
                             .map_err(V::Error::custom);
                         }
+
                         published_date = adaptor::parse_published_date(map.next_value()?);
                     }
 
@@ -401,6 +223,7 @@ where
                             )))
                             .map_err(V::Error::custom);
                         }
+
                         language = adaptor::parse_string(map.next_value()?);
                     }
 
@@ -411,6 +234,7 @@ where
                             )))
                             .map_err(V::Error::custom);
                         }
+
                         page_count = adaptor::parse_page_count(map.next_value()?);
                     }
 
@@ -421,6 +245,7 @@ where
                             )))
                             .map_err(V::Error::custom);
                         }
+
                         categories = adaptor::parse_vec(map.next_value()?);
                     }
 
@@ -431,6 +256,7 @@ where
                             )))
                             .map_err(V::Error::custom);
                         }
+
                         image_links = adaptor::parse_image_links(map.next_value()?);
                     }
 
@@ -536,21 +362,6 @@ mod test {
 
         let isbn = Isbn::from_str("9781534431003").unwrap();
         let resp = GoogleBooks::from_isbn(&isbn).await;
-        debug!("Response: {:#?}", resp);
-        assert!(resp.is_ok())
-    }
-
-    #[tokio::test]
-    async fn parses_extra_from_isbn() {
-        use super::GoogleBooks;
-        use isbn::Isbn;
-        use log::debug;
-        use std::str::FromStr;
-
-        init_logger();
-
-        let isbn = Isbn::from_str("9781534431003").unwrap();
-        let resp = GoogleBooks::from_isbn_extra(&isbn).await;
         debug!("Response: {:#?}", resp);
         assert!(resp.is_ok())
     }
