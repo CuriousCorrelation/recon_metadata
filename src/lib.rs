@@ -46,6 +46,7 @@ async fn main() {
 
 */
 
+pub mod metadata;
 pub mod recon;
 pub mod sources;
 pub mod types;
