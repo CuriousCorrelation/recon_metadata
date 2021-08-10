@@ -1,63 +1,57 @@
-use std::{error, fmt};
+use std::{collections::HashSet, error, fmt};
 
-/// A list of search providers.
-/// Search providers are API to provide search functionality
+/// A list of database or search providers.
+/// Search providers are API to provide search functionality.
 /// This is the first API call in `recon_metadata`
-#[derive(Debug)]
-pub enum SearchProvider {
+/// that will populate [`Metadata`].
+/// Additional data will be provided by [`Source`].
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub enum Database {
     GoogleBooks,
     OpenLibrary,
     Goodreads,
     Amazon,
 }
 
-impl Default for SearchProvider {
+impl Default for Database {
     fn default() -> Self {
-        SearchProvider::GoogleBooks
+        Database::GoogleBooks
     }
 }
 
 /// A list of sources.
 /// Sources are the book information providers
 /// where `recon_metadata` parses search results
-/// from [`SearchProvider`] and gathers additional
+/// from [`Database`] and gathers additional
 /// information on it via these souces.
 #[derive(Debug)]
-pub enum Source {
-    GoogleBooks,
-    OpenLibrary,
-    Goodreads,
-    Amazon,
-}
+pub struct Source(pub(crate) HashSet<Database>);
 
 impl Default for Source {
     fn default() -> Self {
-        Source::GoogleBooks
+        Source(HashSet::new())
     }
 }
 
 impl Source {
-    pub fn all() -> Vec<Self> {
-        vec![
-            Self::GoogleBooks,
-            Self::OpenLibrary,
-            Self::Goodreads,
-            Self::Amazon,
-        ]
+    pub fn new() -> Self {
+        Source(HashSet::new())
     }
 
-    pub fn add(sources: &mut Vec<Self>, source: Self) -> &Vec<Self> {
-        sources.push(source);
-        sources
-    }
-}
+    pub fn all() -> Self {
+        let mut source = HashSet::new();
+        source.insert(Database::GoogleBooks);
+        source.insert(Database::OpenLibrary);
+        source.insert(Database::Goodreads);
+        source.insert(Database::Amazon);
 
-/// A config struct. Provides configuration information like sources and search providers.
-#[derive(Debug)]
-pub struct ReconSetup {
-    pub(crate) search_provider: SearchProvider,
-    pub(crate) sources:         Vec<Source>,
-    pub(crate) extra:           bool,
+        Source(source)
+    }
+
+    pub fn source(mut self, database: Database) -> Self {
+        self.0.insert(database);
+        self
+    }
 }
 
 #[derive(Debug)]
