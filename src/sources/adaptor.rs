@@ -221,10 +221,20 @@ pub(crate) fn parse_vec_hashmap_field(
     vec_hashmap.map(|vec_hashmap| {
         vec_hashmap
             .into_iter()
-            .map(|mut h| h.remove(field))
+            .map(|mut h: HashMap<String, String>| -> Option<Vec<String>> {
+                h.remove(field).map(|s: String| {
+                    s.split(',')
+                        .map(|s: &str| s.trim().to_owned())
+                        // "fiction, science fiction"
+                        // -> "fiction", " science fiction"
+                        // -> "fiction", "science fiction"
+                        .collect::<Vec<String>>()
+                })
+            })
+            .flatten() // Option<Vec<Vec<String>>> -> Vec<Vec<String>> filtering out `None`
             .flatten()
             .map(Ok)
-            .collect::<Vec<Result<String, ReconError>>>()
+            .collect::<Vec<base::Generic>>()
     })
 }
 
