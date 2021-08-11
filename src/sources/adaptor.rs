@@ -7,7 +7,7 @@ Essentially JSON -> Serde -> Metadata
 For example - book title
 JSON - "title"
 Serde - String
-Metadata - Vec<Result<String, ReconError>>
+Metadata - Vec<Generic>
 So JSON -> Serde is `| string | -> Some(sring)`
 Serde -> Metadata is `| string | -> Some(Ok(string))`
 
@@ -25,7 +25,7 @@ API specific function essentially do similar things but for different JSON struc
 
 use crate::{
     recon::ReconError,
-    types::base::{self, ISBNs, Numeric},
+    types::base::{self, Generic, ISBNs, Numeric, ISBN},
 };
 use chrono::NaiveDate;
 use isbn::Isbn;
@@ -92,32 +92,10 @@ pub(crate) fn parse_vec(vecs: Vec<String>) -> Option<Vec<base::Generic>> {
         vecs
     );
 
-    Some(
-        vecs.into_iter()
-            .map(Ok)
-            .collect::<Vec<Result<String, ReconError>>>(),
-    )
+    Some(vecs.into_iter().map(Ok).collect::<Vec<Generic>>())
 }
 
-pub(crate) fn parse_open_library_isbn(
-    isbn: Option<Vec<String>>,
-) -> Option<Vec<Result<Isbn, ReconError>>> {
-    debug!(
-        "`fn parse_open_library_isbn` arg(s) `isbn` is: {:#?}, expecting `Option<Vec<String>>,
-`",
-        isbn
-    );
-
-    isbn.map(|isbn| {
-        isbn.into_iter()
-            .map(|s| Isbn::from_str(&s).map_err(ReconError::ISBNParse))
-            .collect::<Vec<Result<Isbn, ReconError>>>()
-    })
-}
-
-pub(crate) fn parse_image_links(
-    image_links: HashMap<String, String>,
-) -> Option<Vec<Result<String, ReconError>>> {
+pub(crate) fn parse_image_links(image_links: HashMap<String, String>) -> Option<Vec<Generic>> {
     debug!(
         "`fn parse_image_links` arg(s) `image_links` is: {:#?}, expecting `HashMap<String, String>,
 `",
@@ -128,13 +106,11 @@ pub(crate) fn parse_image_links(
         image_links
             .into_iter()
             .map(|(_, v)| Ok(v))
-            .collect::<Vec<Result<String, ReconError>>>(),
+            .collect::<Vec<Generic>>(),
     )
 }
 
-pub(crate) fn parse_hashmap(
-    hashmap: HashMap<String, String>,
-) -> Option<Vec<Result<String, ReconError>>> {
+pub(crate) fn parse_hashmap(hashmap: HashMap<String, String>) -> Option<Vec<Generic>> {
     debug!(
         "`fn parse_hashmap` arg(s) `hashmap` is: {:#?}, expecting `HashMap<String, String>,
 `",
@@ -145,11 +121,11 @@ pub(crate) fn parse_hashmap(
         hashmap
             .into_iter()
             .map(|(_, v)| Ok(v))
-            .collect::<Vec<Result<String, ReconError>>>(),
+            .collect::<Vec<Generic>>(),
     )
 }
 
-pub(crate) fn parse_page_count(page_count: u16) -> Option<Result<u16, ReconError>> {
+pub(crate) fn parse_page_count(page_count: u16) -> Option<Numeric> {
     debug!(
         "`fn parse_page_count` arg(s) `page_count` is: {:#?}, expecting `u16`",
         page_count
@@ -170,9 +146,7 @@ pub(crate) fn parse_published_date(
     Some(NaiveDate::parse_from_str(&published_date, "%Y-%m-%d").map_err(ReconError::DateParse))
 }
 
-pub(crate) fn parse_google_books_isbn(
-    mut isbn: Vec<HashMap<String, String>>,
-) -> Option<Vec<Result<Isbn, ReconError>>> {
+pub(crate) fn parse_google_books_isbn(mut isbn: Vec<HashMap<String, String>>) -> Option<Vec<ISBN>> {
     debug!(
         "`fn parse_google_books_isbn` arg(s) `isbn` is: {:#?}, expecting `Vec<HashMap<String, String>>,
 `",
@@ -184,13 +158,11 @@ pub(crate) fn parse_google_books_isbn(
             .map(|h| h.remove("identifier"))
             .flatten()
             .map(|s| Isbn::from_str(&s).map_err(ReconError::ISBNParse))
-            .collect::<Vec<Result<Isbn, ReconError>>>(),
+            .collect::<Vec<ISBN>>(),
     )
 }
 
-pub(crate) fn parse_authors(
-    authors: Option<Vec<HashMap<String, String>>>,
-) -> Option<Vec<Result<String, ReconError>>> {
+pub(crate) fn parse_authors(authors: Option<Vec<HashMap<String, String>>>) -> Option<Vec<Generic>> {
     debug!(
         "`fn parse_authors` arg(s) `authors` is: {:#?}, expecting `Option<Vec<HashMap<String, String>>>,
 `",
@@ -203,14 +175,14 @@ pub(crate) fn parse_authors(
             .map(|mut h| h.remove("name"))
             .flatten()
             .map(Ok)
-            .collect::<Vec<Result<String, ReconError>>>()
+            .collect::<Vec<Generic>>()
     })
 }
 
 pub(crate) fn parse_vec_hashmap_field(
     vec_hashmap: Option<Vec<HashMap<String, String>>>,
     field: &str,
-) -> Option<Vec<Result<String, ReconError>>> {
+) -> Option<Vec<Generic>> {
     debug!(
         "`fn parse_vec_hashmap` arg(s) `vec_hashmap` is: {:#?}, expecting `Option<Vec<HashMap<String, String>>>,
 `, `field` is: {:#?}",
