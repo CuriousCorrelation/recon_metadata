@@ -2,7 +2,8 @@ use crate::recon::Source;
 use crate::types::base;
 use crate::{
     recon::{Database, ReconError},
-    sources::{google_books::GoogleBooks, open_library::OpenLibrary},
+    sources::google_books::GoogleBooks,
+    sources::open_library::OpenLibrary,
 };
 use isbn::Isbn;
 use log::debug;
@@ -24,16 +25,16 @@ use std::ops::Add;
 /// 4. Cover image
 #[derive(Debug, Default)]
 pub struct Metadata {
-    isbns:             base::ISBNs,
-    titles:            base::Titles,
-    authors:           base::Authors,
-    descriptions:      base::Descriptions,
-    page_count:        base::PageCount,
-    publishers:        base::Publishers,
-    publication_dates: base::PublicationDates,
-    languages:         base::Languages,
-    tags:              base::Tags,
-    cover_images:      base::CoverImages,
+    pub(crate) isbns:             base::ISBNs,
+    pub(crate) titles:            base::Titles,
+    pub(crate) authors:           base::Authors,
+    pub(crate) descriptions:      base::Descriptions,
+    pub(crate) page_count:        base::PageCount,
+    pub(crate) publishers:        base::Publishers,
+    pub(crate) publication_dates: base::PublicationDates,
+    pub(crate) languages:         base::Languages,
+    pub(crate) tags:              base::Tags,
+    pub(crate) cover_images:      base::CoverImages,
 }
 
 impl Add for Metadata {

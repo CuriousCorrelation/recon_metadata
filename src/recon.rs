@@ -71,6 +71,8 @@ pub enum ReconError {
     /// A wrapper around [`chrono::ParseError`]
     /// typically raised by `NaiveDate::parse_from_str(&string, &format_Str)`
     DateParse(chrono::ParseError),
+    /// All catch error
+    MissingField(String),
 }
 
 impl fmt::Display for ReconError {
