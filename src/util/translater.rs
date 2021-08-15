@@ -38,7 +38,7 @@ pub(crate) fn vec_hashmap_field(
         .collect()
 }
 
-pub(crate) fn vec_hashmap_field_split_lowercase(
+pub(crate) fn vec_hashmap_field_split(
     vec_hashmap: Vec<HashMap<&str, &str>>,
     field: &str,
 ) -> Vec<Generic> {
