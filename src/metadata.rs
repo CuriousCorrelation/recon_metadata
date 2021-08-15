@@ -1,12 +1,11 @@
 use crate::recon::Source;
-use crate::types::base;
 use crate::{
     recon::{Database, ReconError},
-    sources::google_books::GoogleBooks,
-    sources::open_library::OpenLibrary,
+    source::google_books::GoogleBooks,
+    source::open_library::OpenLibrary,
 };
-use isbn::Isbn;
-use log::debug;
+use chrono::NaiveDate;
+use isbn2::{Isbn, Isbn10, Isbn13};
 use std::collections::HashSet;
 use std::ops::Add;
 
@@ -25,32 +24,34 @@ use std::ops::Add;
 /// 4. Cover image
 #[derive(Debug, Default)]
 pub struct Metadata {
-    pub(crate) isbns:             base::ISBNs,
-    pub(crate) titles:            base::Titles,
-    pub(crate) authors:           base::Authors,
-    pub(crate) descriptions:      base::Descriptions,
-    pub(crate) page_count:        base::PageCount,
-    pub(crate) publishers:        base::Publishers,
-    pub(crate) publication_dates: base::PublicationDates,
-    pub(crate) languages:         base::Languages,
-    pub(crate) tags:              base::Tags,
-    pub(crate) cover_images:      base::CoverImages,
+    pub(crate) isbn10s:           HashSet<Isbn10>,
+    pub(crate) isbn13s:           HashSet<Isbn13>,
+    pub(crate) titles:            HashSet<String>,
+    pub(crate) authors:           HashSet<String>,
+    pub(crate) descriptions:      HashSet<String>,
+    pub(crate) page_count:        HashSet<u16>,
+    pub(crate) publishers:        HashSet<String>,
+    pub(crate) publication_dates: HashSet<NaiveDate>,
+    pub(crate) languages:         HashSet<String>,
+    pub(crate) tags:              HashSet<String>,
+    pub(crate) cover_images:      HashSet<String>,
 }
 
 impl Add for Metadata {
     type Output = Self;
 
-    fn add(mut self, mut other: Self) -> Self {
-        self.isbns.append(&mut other.isbns);
-        self.titles.append(&mut other.titles);
-        self.authors.append(&mut other.authors);
-        self.descriptions.append(&mut other.descriptions);
-        self.page_count.append(&mut other.page_count);
-        self.publishers.append(&mut other.publishers);
-        self.publication_dates.append(&mut other.publication_dates);
-        self.languages.append(&mut other.languages);
-        self.tags.append(&mut other.tags);
-        self.cover_images.append(&mut other.cover_images);
+    fn add(mut self, other: Self) -> Self {
+        self.isbn10s.extend(other.isbn10s);
+        self.isbn13s.extend(other.isbn13s);
+        self.titles.extend(other.titles);
+        self.authors.extend(other.authors);
+        self.descriptions.extend(other.descriptions);
+        self.page_count.extend(other.page_count);
+        self.publishers.extend(other.publishers);
+        self.publication_dates.extend(other.publication_dates);
+        self.languages.extend(other.languages);
+        self.tags.extend(other.tags);
+        self.cover_images.extend(other.cover_images);
 
         self
     }
@@ -58,71 +59,6 @@ impl Add for Metadata {
 
 /// A type synonym for `Result<Vec<Metadata>, ReconError>`
 pub type ReconResult = Result<Metadata, ReconError>;
-
-impl Metadata {
-    pub fn isbns(mut self, isbns: base::ISBNs) -> Self {
-        self.isbns = isbns;
-        debug!("Field `isbns` is set to: {:#?}", self.isbns);
-        self
-    }
-
-    pub fn titles(mut self, titles: base::Titles) -> Self {
-        self.titles = titles;
-        debug!("Field `titles` is set to: {:#?}", self.titles);
-        self
-    }
-
-    pub fn authors(mut self, authors: base::Authors) -> Self {
-        self.authors = authors;
-        debug!("Field `authors` is set to: {:#?}", self.authors);
-        self
-    }
-
-    pub fn descriptions(mut self, descriptions: base::Descriptions) -> Self {
-        self.descriptions = descriptions;
-        debug!("Field `descriptions` is set to: {:#?}", self.descriptions);
-        self
-    }
-
-    pub fn page_count(mut self, page_count: base::PageCount) -> Self {
-        self.page_count = page_count;
-        debug!("Field `page_count` is set to: {:#?}", self.page_count);
-        self
-    }
-
-    pub fn publishers(mut self, publishers: base::Publishers) -> Self {
-        self.publishers = publishers;
-        debug!("Field `publishers` is set to: {:#?}", self.publishers);
-        self
-    }
-
-    pub fn publication_dates(mut self, publication_dates: base::PublicationDates) -> Self {
-        self.publication_dates = publication_dates;
-        debug!(
-            "Field `publication_dates` is set to: {:#?}",
-            self.publication_dates
-        );
-        self
-    }
-
-    pub fn languages(mut self, languages: base::Languages) -> Self {
-        self.languages = languages;
-        debug!("Field `languages` is set to: {:#?}", self.languages);
-        self
-    }
-
-    pub fn tags(mut self, tags: base::Tags) -> Self {
-        self.tags = tags;
-        debug!("Field `tags` is set to: {:#?}", self.tags);
-        self
-    }
-
-    pub fn cover_images(mut self, cover_images: base::CoverImages) -> Self {
-        self.cover_images = cover_images;
-        debug!("Field `cover_images` is set to: {:#?}", self.cover_images);
-        self
-    }
-}
 
 impl Metadata {
     async fn ask_database(database: &Database, isbn: &Isbn) -> ReconResult {
@@ -155,6 +91,7 @@ impl Metadata {
 
 #[cfg(test)]
 mod test {
+    use log::debug;
 
     fn init_logger() {
         let _ = env_logger::builder().is_test(true).try_init();
@@ -166,7 +103,7 @@ mod test {
         use crate::metadata::ReconResult;
         use crate::recon::Database;
         use crate::recon::Source;
-        use isbn::Isbn;
+        use isbn2::Isbn;
         use std::str::FromStr;
 
         init_logger();
@@ -179,7 +116,7 @@ mod test {
 
         let res: ReconResult = Metadata::from_isbn(&source, &isbn).await;
 
-        println!("Response: {:#?}", res);
+        debug!("Response: {:#?}", res);
         assert!(res.is_ok());
     }
 }
