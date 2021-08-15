@@ -158,7 +158,8 @@ impl<'de> Deserialize<'de> for OpenLibrary {
                 let cover = cover.ok_or_else(|| de::Error::missing_field("cover"))?;
 
                 Ok(OpenLibrary(Metadata {
-                    isbns:             translater::openlibrary_isbn(identifiers),
+                    isbn10s:           translater::openlibrary_isbn10(&identifiers),
+                    isbn13s:           translater::openlibrary_isbn13(&identifiers),                    
                     titles:            translater::string(title),
                     authors:           translater::vec_hashmap_field(authors, "name"),
                     descriptions:      translater::empty(),
@@ -194,7 +195,7 @@ impl<'de> Deserialize<'de> for OpenLibrary {
 }
 
 impl OpenLibrary {
-    pub async fn from_isbn(isbn: &isbn::Isbn) -> Result<Metadata, ReconError> {
+    pub async fn from_isbn(isbn: &isbn2::Isbn) -> Result<Metadata, ReconError> {
         let req = format!(
             "https://openlibrary.org/api/books?bibkeys=ISBN:{}&jscmd=data&format=json",
             urlencoding::encode(&isbn.to_string())
@@ -231,7 +232,7 @@ mod test {
     #[tokio::test]
     async fn parses_from_isbn() {
         use super::OpenLibrary;
-        use isbn::Isbn;
+        use isbn2::Isbn;
         use log::debug;
         use std::str::FromStr;
 

@@ -67,7 +67,7 @@ pub enum ReconError {
     Connection(reqwest::Error),
     /// A wrapper around [`isbn::IsbnError`]
     /// typically raised by `isbn::Isbn::from_str(possible_isbn_str)`
-    ISBNParse(isbn::IsbnError),
+    ISBNParse(isbn2::IsbnError),
     /// A wrapper around [`chrono::ParseError`]
     /// typically raised by `NaiveDate::parse_from_str(&string, &format_Str)`
     DateParse(chrono::ParseError),

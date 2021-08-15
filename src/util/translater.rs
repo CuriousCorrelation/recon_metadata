@@ -1,47 +1,50 @@
-use crate::{
-    recon::ReconError,
-    types::base::{Generic, ISBNs, PublicationDates, Titles},
-};
 use chrono::NaiveDate;
-use isbn::Isbn;
-use std::{collections::HashMap, str::FromStr};
+use isbn2::{Isbn10, Isbn13};
+use std::{
+    collections::{HashMap, HashSet},
+    str::FromStr,
+};
 
-pub(crate) fn number(n: u16) -> Vec<Result<u16, ReconError>> {
-    vec![Ok(n)]
+pub(crate) fn number(n: u16) -> HashSet<u16> {
+    let mut h = HashSet::new();
+    h.insert(n);
+    h
 }
 
-pub(crate) fn empty() -> Vec<Generic> {
-    vec![]
+pub(crate) fn empty() -> HashSet<String> {
+    HashSet::new()
 }
 
-pub(crate) fn string(s: &str) -> Titles {
-    vec![Ok(s.to_owned())]
+pub(crate) fn string(s: &str) -> HashSet<String> {
+    let mut h = HashSet::new();
+    h.insert(s.to_owned());
+    h
 }
 
-pub(crate) fn hashmap(hashmap: HashMap<&str, &str>) -> Vec<Generic> {
-    hashmap.into_iter().map(|(_, v)| Ok(v.to_owned())).collect()
+pub(crate) fn hashmap(hashmap: HashMap<&str, &str>) -> HashSet<String> {
+    hashmap.into_iter().map(|(_, v)| v.to_owned()).collect()
 }
 
-pub(crate) fn vec(vec: Vec<&str>) -> Vec<Generic> {
-    vec.into_iter().map(|v| Ok(v.to_owned())).collect()
+pub(crate) fn vec(vec: Vec<&str>) -> HashSet<String> {
+    vec.into_iter().map(|v| v.to_owned()).collect()
 }
 
 pub(crate) fn vec_hashmap_field(
     vec_hashmap: Vec<HashMap<&str, &str>>,
     field: &str,
-) -> Vec<Generic> {
+) -> HashSet<String> {
     vec_hashmap
         .into_iter()
         .map(|mut h| h.remove(field))
         .flatten()
-        .map(|s| Ok(s.to_owned()))
+        .map(|s| s.to_owned())
         .collect()
 }
 
 pub(crate) fn vec_hashmap_field_split(
     vec_hashmap: Vec<HashMap<&str, &str>>,
     field: &str,
-) -> Vec<Generic> {
+) -> HashSet<String> {
     vec_hashmap
         .into_iter()
         .map(|mut h| h.remove(field))
@@ -52,35 +55,64 @@ pub(crate) fn vec_hashmap_field_split(
                 .map(|s| s.trim().replace(" ", "-").to_lowercase())
         })
         .flatten()
-        .map(Ok)
         .collect()
 }
 
-pub(crate) fn openlibrary_isbn(hashmap_vec: HashMap<&str, Vec<&str>>) -> ISBNs {
+pub(crate) fn openlibrary_isbn10(hashmap_vec: &HashMap<&str, Vec<&str>>) -> HashSet<Isbn10> {
     hashmap_vec
-        .into_iter()
-        .filter(|(k, _)| k.starts_with("isbn_"))
+        .iter()
+        .filter(|(k, _)| k.starts_with("isbn_10"))
         .map(|(_, v)| v)
         .flatten()
-        .map(|s| Isbn::from_str(s).map_err(ReconError::ISBNParse))
+        .map(
+            |s| Isbn10::from_str(s).unwrap(), // assuming ISBN is valid
+        )
         .collect()
 }
 
-pub(crate) fn googlebooks_isbn(hashmap_vec: Vec<HashMap<&str, &str>>) -> ISBNs {
+pub(crate) fn openlibrary_isbn13(hashmap_vec: &HashMap<&str, Vec<&str>>) -> HashSet<Isbn13> {
     hashmap_vec
-        .into_iter()
-        .map(|mut h| h.remove("identifier"))
+        .iter()
+        .filter(|(k, _)| k.starts_with("isbn_13"))
+        .map(|(_, v)| v)
         .flatten()
-        .map(|s| Isbn::from_str(s).map_err(ReconError::ISBNParse))
+        .map(
+            |s| Isbn13::from_str(s).unwrap(), // assuming ISBN is valid
+        )
         .collect()
 }
 
-pub(crate) fn publication_date(s: &str) -> PublicationDates {
+pub(crate) fn googlebooks_isbn10(hashmap_vec: &Vec<HashMap<&str, &str>>) -> HashSet<Isbn10> {
+    hashmap_vec
+        .iter()
+        .filter(|h| h.get("type") == Some("ISBN_10").as_ref())
+        .map(|h| h.get("identifier"))
+        .flatten()
+        .map(
+            |s| Isbn10::from_str(s).unwrap(), // assuming ISBN is valid
+        )
+        .collect()
+}
+
+pub(crate) fn googlebooks_isbn13(hashmap_vec: &Vec<HashMap<&str, &str>>) -> HashSet<Isbn13> {
+    hashmap_vec
+        .iter()
+        .filter(|h| h.get("type") == Some("ISBN_13").as_ref())
+        .map(|h| h.get("identifier"))
+        .flatten()
+        .map(
+            |s| Isbn13::from_str(s).unwrap(), // assuming ISBN is valid
+        )
+        .collect()
+}
+
+pub(crate) fn publication_date(s: &str) -> HashSet<NaiveDate> {
     let possible_formats = ["%B %d, %Y", "%Y-%m-%d", "%B, %d %Y"];
 
     possible_formats
         .iter()
-        .map(|fmt| NaiveDate::parse_from_str(s, fmt).map_err(ReconError::DateParse))
+        .map(|fmt| NaiveDate::parse_from_str(s, fmt))
         .filter(|s| s.is_ok())
-        .collect::<Vec<Result<NaiveDate, ReconError>>>()
+        .map(|s| s.unwrap())
+        .collect::<HashSet<NaiveDate>>()
 }
