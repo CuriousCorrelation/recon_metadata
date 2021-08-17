@@ -1,11 +1,14 @@
 use crate::metadata::Metadata;
 use crate::recon::ReconError;
 use crate::util::translater;
+use isbn2::Isbn;
 use log::debug;
 use serde::de;
 use serde::{Deserialize, Deserializer};
+use std::collections::HashMap;
 use std::fmt;
 use std::marker::PhantomData;
+use std::str::FromStr;
 
 #[derive(Debug)]
 pub struct GoogleBooks(Metadata);
@@ -161,22 +164,6 @@ impl<'de> Deserialize<'de> for GoogleBooks {
                     }
                 }
 
-                let industry_identifiers = industry_identifiers
-                    .ok_or_else(|| de::Error::missing_field("industryIdentifiers"))?;
-                let title = title.ok_or_else(|| de::Error::missing_field("title"))?;
-                let authors = authors.ok_or_else(|| de::Error::missing_field("authors"))?;
-                let description =
-                    description.ok_or_else(|| de::Error::missing_field("description"))?;
-                let page_count = page_count.ok_or_else(|| de::Error::missing_field("pageCount"))?;
-                let publisher = publisher.ok_or_else(|| de::Error::missing_field("publisher"))?;
-                let published_date =
-                    published_date.ok_or_else(|| de::Error::missing_field("publishedDate"))?;
-                let categories =
-                    categories.ok_or_else(|| de::Error::missing_field("categories"))?;
-                let image_links =
-                    image_links.ok_or_else(|| de::Error::missing_field("imageLinks"))?;
-                let language = language.ok_or_else(|| de::Error::missing_field("language"))?;
-
                 Ok(GoogleBooks(Metadata {
                     isbn10s:           translater::googlebooks_isbn10(&industry_identifiers),
                     isbn13s:           translater::googlebooks_isbn13(&industry_identifiers),
@@ -255,6 +242,61 @@ impl GoogleBooks {
 
         Ok(metadata)
     }
+
+    pub async fn from_description(description: &str) -> Result<Vec<Metadata>, ReconError> {
+        let req = format!(
+            "https://www.googleapis.com/books/v1/volumes?q={}",
+            urlencoding::encode(description)
+        );
+
+        debug!("Description: {:#?}", &description);
+        debug!("Request: {:#?}", &req);
+
+        #[derive(Debug, Deserialize)]
+        struct Items {
+            items: Vec<VolumeInfo>,
+        }
+
+        #[derive(Debug, Deserialize)]
+        struct VolumeInfo {
+            #[serde(rename = "volumeInfo")]
+            volume_info: IndustryIdentifiers,
+        }
+
+        #[derive(Debug, Deserialize)]
+        struct IndustryIdentifiers {
+            #[serde(rename = "industryIdentifiers")]
+            industry_identifiers: Vec<HashMap<String, String>>,
+        }
+
+        let response = reqwest::get(req)
+            .await
+            .map_err(ReconError::Connection)?
+            .json::<Items>()
+            .await
+            .map_err(ReconError::Connection)?;
+
+        debug!("Response: {:#?}", &response);
+
+        // one ISBN from each book
+        let mut isbns = response
+            .items
+            .into_iter()
+            .map(|mut info| info.volume_info.industry_identifiers.remove(0))
+            .map(|mut h| h.remove("identifier"))
+            .flatten()
+            .collect::<Vec<String>>();
+
+        isbns.truncate(3); // first 3 results
+
+        let mut metadata_list = Vec::new();
+
+        for isbn in isbns {
+            metadata_list.push(Self::from_isbn(&Isbn::from_str(&isbn).unwrap()).await?)
+        }
+
+        Ok(metadata_list)
+    }
 }
 
 #[cfg(test)]
@@ -274,6 +316,19 @@ mod test {
 
         let isbn = Isbn::from_str("9781534431003").unwrap();
         let resp = GoogleBooks::from_isbn(&isbn).await;
+        debug!("Response: {:#?}", resp);
+        assert!(resp.is_ok())
+    }
+
+    #[tokio::test]
+    async fn parses_from_description() {
+        use super::GoogleBooks;
+        use log::debug;
+
+        init_logger();
+
+        let description = "This is how you lose the time war";
+        let resp = GoogleBooks::from_description(&description).await;
         debug!("Response: {:#?}", resp);
         assert!(resp.is_ok())
     }

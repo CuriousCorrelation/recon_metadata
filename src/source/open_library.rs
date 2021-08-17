@@ -144,22 +144,9 @@ impl<'de> Deserialize<'de> for OpenLibrary {
                     }
                 }
 
-                let identifiers =
-                    identifiers.ok_or_else(|| de::Error::missing_field("identifiers"))?;
-                let title = title.ok_or_else(|| de::Error::missing_field("title"))?;
-                let authors = authors.ok_or_else(|| de::Error::missing_field("authors"))?;
-                let number_of_pages =
-                    number_of_pages.ok_or_else(|| de::Error::missing_field("number_of_pages"))?;
-                let publishers =
-                    publishers.ok_or_else(|| de::Error::missing_field("publishers"))?;
-                let publish_date =
-                    publish_date.ok_or_else(|| de::Error::missing_field("publish_date"))?;
-                let subjects = subjects.ok_or_else(|| de::Error::missing_field("subjects"))?;
-                let cover = cover.ok_or_else(|| de::Error::missing_field("cover"))?;
-
                 Ok(OpenLibrary(Metadata {
                     isbn10s:           translater::openlibrary_isbn10(&identifiers),
-                    isbn13s:           translater::openlibrary_isbn13(&identifiers),                    
+                    isbn13s:           translater::openlibrary_isbn13(&identifiers),
                     titles:            translater::string(title),
                     authors:           translater::vec_hashmap_field(authors, "name"),
                     descriptions:      translater::empty(),
