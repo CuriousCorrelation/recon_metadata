@@ -1,8 +1,6 @@
 use crate::recon::Source;
 use crate::{
-    recon::{Database, ReconError},
-    source::google_books::GoogleBooks,
-    source::open_library::OpenLibrary,
+    recon::ReconError, source::google_books::GoogleBooks, source::open_library::OpenLibrary,
 };
 use chrono::NaiveDate;
 use isbn2::{Isbn, Isbn10, Isbn13};
@@ -61,12 +59,12 @@ impl Add for Metadata {
 pub type ReconResult = Result<Metadata, ReconError>;
 
 impl Metadata {
-    async fn ask_database(database: &Database, isbn: &Isbn) -> ReconResult {
-        match database {
-            Database::GoogleBooks => GoogleBooks::from_isbn(isbn).await,
-            Database::OpenLibrary => OpenLibrary::from_isbn(isbn).await,
-            Database::Amazon => unimplemented!(),
-            Database::Goodreads => unimplemented!(),
+    async fn from_source(source: &Source, isbn: &Isbn) -> ReconResult {
+        match source {
+            Source::GoogleBooks => GoogleBooks::from_isbn(isbn).await,
+            Source::OpenLibrary => OpenLibrary::from_isbn(isbn).await,
+            Source::Amazon => unimplemented!(),
+            Source::Goodreads => unimplemented!(),
         }
     }
 
@@ -76,13 +74,11 @@ impl Metadata {
     /// for initial information and fill in the blacks making expensive calls
     /// but returning almost complete information about the book
     /// provides by the sources defined by [`Source`].
-    pub async fn from_isbn(source: &Source, isbn: &Isbn) -> ReconResult {
-        let database_list: &HashSet<Database> = &source.0;
-
+    pub async fn from_isbn(sources: &[Source], isbn: &Isbn) -> ReconResult {
         let mut metadata = Metadata::default();
 
-        for database in database_list {
-            metadata = metadata + Self::ask_database(database, isbn).await?;
+        for source in sources {
+            metadata = metadata + Self::from_source(source, isbn).await?;
         }
 
         Ok(metadata)
@@ -101,7 +97,6 @@ mod test {
     async fn parses_from_isbn() {
         use super::Metadata;
         use crate::metadata::ReconResult;
-        use crate::recon::Database;
         use crate::recon::Source;
         use isbn2::Isbn;
         use std::str::FromStr;
@@ -110,11 +105,9 @@ mod test {
 
         let isbn = Isbn::from_str("9781534431003").unwrap();
 
-        let source = Source::new()
-            .source(Database::GoogleBooks)
-            .source(Database::OpenLibrary);
+        let sources = [Source::GoogleBooks, Source::OpenLibrary];
 
-        let res: ReconResult = Metadata::from_isbn(&source, &isbn).await;
+        let res: ReconResult = Metadata::from_isbn(&sources, &isbn).await;
 
         debug!("Response: {:#?}", res);
         assert!(res.is_ok());

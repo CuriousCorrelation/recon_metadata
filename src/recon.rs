@@ -1,4 +1,4 @@
-use std::{collections::HashSet, error, fmt};
+use std::{error, fmt};
 
 /// A list of database or search providers.
 /// Search providers are API to provide search functionality.
@@ -6,52 +6,11 @@ use std::{collections::HashSet, error, fmt};
 /// that will populate [`Metadata`].
 /// Additional data will be provided by [`Source`].
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub enum Database {
+pub enum Source {
     GoogleBooks,
     OpenLibrary,
     Goodreads,
     Amazon,
-}
-
-impl Default for Database {
-    fn default() -> Self {
-        Database::GoogleBooks
-    }
-}
-
-/// A list of sources.
-/// Sources are the book information providers
-/// where `recon_metadata` parses search results
-/// from [`Database`] and gathers additional
-/// information on it via these souces.
-#[derive(Debug)]
-pub struct Source(pub(crate) HashSet<Database>);
-
-impl Default for Source {
-    fn default() -> Self {
-        Source(HashSet::new())
-    }
-}
-
-impl Source {
-    pub fn new() -> Self {
-        Source(HashSet::new())
-    }
-
-    pub fn all() -> Self {
-        let mut source = HashSet::new();
-        source.insert(Database::GoogleBooks);
-        source.insert(Database::OpenLibrary);
-        source.insert(Database::Goodreads);
-        source.insert(Database::Amazon);
-
-        Source(source)
-    }
-
-    pub fn source(mut self, database: Database) -> Self {
-        self.0.insert(database);
-        self
-    }
 }
 
 #[derive(Debug)]
