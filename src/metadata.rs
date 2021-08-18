@@ -4,6 +4,8 @@ use crate::{
 };
 use chrono::NaiveDate;
 use isbn2::{Isbn, Isbn10, Isbn13};
+use serde::ser::SerializeSeq;
+use serde::{Serialize, Serializer};
 use std::collections::HashSet;
 use std::ops::Add;
 
@@ -20,36 +22,81 @@ use std::ops::Add;
 /// 2. Publication Date(s)
 /// 3. Language
 /// 4. Cover image
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize)]
 pub struct Metadata {
+    #[serde(serialize_with = "serialize_hashset_isbn10")]
     pub(crate) isbn10:           HashSet<Isbn10>,
+    #[serde(serialize_with = "serialize_hashset_isbn13")]
     pub(crate) isbn13:           HashSet<Isbn13>,
     pub(crate) title:            HashSet<String>,
     pub(crate) author:           HashSet<String>,
     pub(crate) description:      HashSet<String>,
     pub(crate) page_count:       HashSet<u16>,
     pub(crate) publisher:        HashSet<String>,
+    #[serde(serialize_with = "serialize_hashset_naivedate")]
     pub(crate) publication_date: HashSet<NaiveDate>,
     pub(crate) language:         HashSet<String>,
     pub(crate) tag:              HashSet<String>,
     pub(crate) cover_image:      HashSet<String>,
 }
 
+fn serialize_hashset_naivedate<S>(
+    dates: &HashSet<NaiveDate>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let mut seq = serializer.serialize_seq(Some(dates.len()))?;
+
+    for date in dates {
+        let s = format!("{}", date.format("%Y-%m-%d").to_string());
+        seq.serialize_element(&s)?;
+    }
+    seq.end()
+}
+
+fn serialize_hashset_isbn10<S>(isbn10s: &HashSet<Isbn10>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let mut seq = serializer.serialize_seq(Some(isbn10s.len()))?;
+
+    for isbn10 in isbn10s {
+        let s = isbn10.to_string();
+        seq.serialize_element(&s)?;
+    }
+    seq.end()
+}
+
+fn serialize_hashset_isbn13<S>(isbn13s: &HashSet<Isbn13>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let mut seq = serializer.serialize_seq(Some(isbn13s.len()))?;
+
+    for isbn13 in isbn13s {
+        let s = isbn13.to_string();
+        seq.serialize_element(&s)?;
+    }
+    seq.end()
+}
+
 impl Add for Metadata {
     type Output = Self;
 
     fn add(mut self, other: Self) -> Self {
-        self.isbn10s.extend(other.isbn10s);
-        self.isbn13s.extend(other.isbn13s);
-        self.titles.extend(other.titles);
-        self.authors.extend(other.authors);
-        self.descriptions.extend(other.descriptions);
+        self.isbn10.extend(other.isbn10);
+        self.isbn13.extend(other.isbn13);
+        self.title.extend(other.title);
+        self.author.extend(other.author);
+        self.description.extend(other.description);
         self.page_count.extend(other.page_count);
-        self.publishers.extend(other.publishers);
-        self.publication_dates.extend(other.publication_dates);
-        self.languages.extend(other.languages);
-        self.tags.extend(other.tags);
-        self.cover_images.extend(other.cover_images);
+        self.publisher.extend(other.publisher);
+        self.publication_date.extend(other.publication_date);
+        self.language.extend(other.language);
+        self.tag.extend(other.tag);
+        self.cover_image.extend(other.cover_image);
 
         self
     }
