@@ -165,17 +165,17 @@ impl<'de> Deserialize<'de> for GoogleBooks {
                 }
 
                 Ok(GoogleBooks(Metadata {
-                    isbn10s:           translater::googlebooks_isbn10(&industry_identifiers),
-                    isbn13s:           translater::googlebooks_isbn13(&industry_identifiers),
-                    titles:            translater::string(title),
-                    authors:           translater::vec(authors),
-                    descriptions:      translater::string(description),
-                    page_count:        translater::number(page_count),
-                    publishers:        translater::string(publisher),
-                    publication_dates: translater::publication_date(published_date),
-                    languages:         translater::string(language),
-                    tags:              translater::vec(categories),
-                    cover_images:      translater::hashmap(image_links),
+                    isbn10:           translater::googlebooks_isbn10(&industry_identifiers),
+                    isbn13:           translater::googlebooks_isbn13(&industry_identifiers),
+                    title:            translater::string(title),
+                    author:           translater::vec(authors),
+                    description:      translater::string(description),
+                    page_count:       translater::number(page_count),
+                    publisher:        translater::string(publisher),
+                    publication_date: translater::publication_date(published_date),
+                    language:         translater::string(language),
+                    tag:              translater::vec(categories),
+                    cover_image:      translater::hashmap(image_links),
                 }))
             }
         }

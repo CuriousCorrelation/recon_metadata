@@ -22,17 +22,17 @@ use std::ops::Add;
 /// 4. Cover image
 #[derive(Debug, Default)]
 pub struct Metadata {
-    pub(crate) isbn10s:           HashSet<Isbn10>,
-    pub(crate) isbn13s:           HashSet<Isbn13>,
-    pub(crate) titles:            HashSet<String>,
-    pub(crate) authors:           HashSet<String>,
-    pub(crate) descriptions:      HashSet<String>,
-    pub(crate) page_count:        HashSet<u16>,
-    pub(crate) publishers:        HashSet<String>,
-    pub(crate) publication_dates: HashSet<NaiveDate>,
-    pub(crate) languages:         HashSet<String>,
-    pub(crate) tags:              HashSet<String>,
-    pub(crate) cover_images:      HashSet<String>,
+    pub(crate) isbn10:           HashSet<Isbn10>,
+    pub(crate) isbn13:           HashSet<Isbn13>,
+    pub(crate) title:            HashSet<String>,
+    pub(crate) author:           HashSet<String>,
+    pub(crate) description:      HashSet<String>,
+    pub(crate) page_count:       HashSet<u16>,
+    pub(crate) publisher:        HashSet<String>,
+    pub(crate) publication_date: HashSet<NaiveDate>,
+    pub(crate) language:         HashSet<String>,
+    pub(crate) tag:              HashSet<String>,
+    pub(crate) cover_image:      HashSet<String>,
 }
 
 impl Add for Metadata {

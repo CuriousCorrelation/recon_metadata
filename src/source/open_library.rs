@@ -145,17 +145,17 @@ impl<'de> Deserialize<'de> for OpenLibrary {
                 }
 
                 Ok(OpenLibrary(Metadata {
-                    isbn10s:           translater::openlibrary_isbn10(&identifiers),
-                    isbn13s:           translater::openlibrary_isbn13(&identifiers),
-                    titles:            translater::string(title),
-                    authors:           translater::vec_hashmap_field(authors, "name"),
-                    descriptions:      translater::empty(),
-                    page_count:        translater::number(number_of_pages),
-                    publishers:        translater::vec_hashmap_field(publishers, "name"),
-                    publication_dates: translater::publication_date(publish_date),
-                    languages:         translater::empty(),
-                    cover_images:      translater::hashmap(cover),
-                    tags:              translater::vec_hashmap_field_split(subjects, "name"),
+                    isbn10:           translater::openlibrary_isbn10(&identifiers),
+                    isbn13:           translater::openlibrary_isbn13(&identifiers),
+                    title:            translater::string(title),
+                    author:           translater::vec_hashmap_field(authors, "name"),
+                    description:      translater::empty(),
+                    page_count:       translater::number(number_of_pages),
+                    publisher:        translater::vec_hashmap_field(publishers, "name"),
+                    publication_date: translater::publication_date(publish_date),
+                    language:         translater::empty(),
+                    cover_image:      translater::hashmap(cover),
+                    tag:              translater::vec_hashmap_field_split(subjects, "name"),
                 }))
             }
         }
