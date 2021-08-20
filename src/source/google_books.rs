@@ -206,7 +206,7 @@ impl<'de> Deserialize<'de> for GoogleBooks {
 impl GoogleBooks {
     pub async fn from_isbn(isbn: &isbn2::Isbn) -> Result<Metadata, ReconError> {
         let req = format!(
-            "https://www.googleapis.com/books/v1/volumes?q=isbn:{}",
+            "https://www.googleapis.com/books/v1/volumes?q=isbn:{}&fields=items/volumeInfo(title,authors,publisher,publishedDate,language,industryIdentifiers,description,imageLinks)&maxResults=1",
             urlencoding::encode(&isbn.to_string())
         );
 
@@ -240,7 +240,7 @@ impl GoogleBooks {
 
     pub async fn from_description(description: &str) -> Result<Vec<Isbn>, ReconError> {
         let req = format!(
-            "https://www.googleapis.com/books/v1/volumes?q={}",
+            "https://www.googleapis.com/books/v1/volumes?q={}&fields=items/volumeInfo(industryIdentifiers)",
             urlencoding::encode(description)
         );
 
