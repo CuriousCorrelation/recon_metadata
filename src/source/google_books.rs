@@ -11,6 +11,7 @@ use std::marker::PhantomData;
 use std::str::FromStr;
 
 #[derive(Debug)]
+/// A wrapper around [`Metadata`] for deserialization
 pub struct GoogleBooks(Metadata);
 
 impl<'de> Deserialize<'de> for GoogleBooks {
@@ -204,6 +205,8 @@ impl<'de> Deserialize<'de> for GoogleBooks {
 }
 
 impl GoogleBooks {
+    /// Performs an ISBN search using GoogleBooks API
+    /// <https://developers.google.com/books/docs/v1/using>
     pub async fn from_isbn(isbn: &isbn2::Isbn) -> Result<Metadata, ReconError> {
         let req = format!(
             "https://www.googleapis.com/books/v1/volumes?q=isbn:{}&fields=items/volumeInfo(title,authors,publisher,publishedDate,language,industryIdentifiers,description,categories,imageLinks)&maxResults=1",
@@ -238,6 +241,8 @@ impl GoogleBooks {
         Ok(metadata.unwrap_or_default())
     }
 
+    /// Performs a descriptive search using GoogleBooks API
+    /// <https://developers.google.com/books/docs/v1/using>
     pub async fn from_description(description: &str) -> Result<Vec<Isbn>, ReconError> {
         let req = format!(
             "https://www.googleapis.com/books/v1/volumes?q={}&fields=items/volumeInfo(industryIdentifiers)",

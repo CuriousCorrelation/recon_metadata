@@ -11,6 +11,7 @@ use std::marker::PhantomData;
 use std::str::FromStr;
 
 #[derive(Debug)]
+/// A wrapper around [`Metadata`] for deserialization
 pub struct OpenLibrary(Metadata);
 
 impl<'de> Deserialize<'de> for OpenLibrary {
@@ -184,6 +185,8 @@ impl<'de> Deserialize<'de> for OpenLibrary {
 }
 
 impl OpenLibrary {
+    /// Performs an ISBN search using OpenLibrary API
+    /// <https://openlibrary.org/developers/api>
     pub async fn from_isbn(isbn: &isbn2::Isbn) -> Result<Metadata, ReconError> {
         let req = format!(
             "https://openlibrary.org/api/books?bibkeys=ISBN:{}&jscmd=data&format=json",
@@ -207,6 +210,8 @@ impl OpenLibrary {
         Ok(metadata.unwrap_or_default())
     }
 
+    /// Performs a descriptive search using OpenLibrary API
+    /// <https://openlibrary.org/developers/api>
     pub async fn from_description(description: &str) -> Result<Vec<Isbn>, ReconError> {
         let req = format!(
             "https://openlibrary.org/search.json?q={}",

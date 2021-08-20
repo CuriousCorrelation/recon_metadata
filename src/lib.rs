@@ -1,8 +1,8 @@
-//#![warn(missing_docs)]
-//#![warn(clippy::all)]
-//#![warn(missing_debug_implementations)]
-//#![warn(missing_debug_implementations)]
-//#![feature(result_flattening)]
+#![warn(missing_docs)]
+#![warn(clippy::all)]
+#![warn(missing_debug_implementations)]
+#![warn(missing_debug_implementations)]
+#![feature(result_flattening)]
 
 /*!
 # Usage
@@ -46,27 +46,58 @@ async fn main() {
 
 */
 
+/// Book metadata returned by database and search APIs
 pub mod metadata;
+/// Types required by `recon_metadata`
 pub mod recon;
+/// API and database sources
 pub mod source;
+/// Utility functions used for type conversion and field translation
 pub mod util;
 
 #[cfg(test)]
 mod tests {
 
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
+    #[tokio::test]
+    async fn parses_from_isbn() {
+        use super::Metadata;
+        use crate::recon::{ReconError, Source};
+        use isbn2::Isbn;
+        use std::str::FromStr;
+
+        init_logger();
+
+        let isbn = Isbn::from_str("9781534431003").unwrap();
+
+        let sources = [Source::GoogleBooks, Source::OpenLibrary];
+
+        let res: Result<Metadata, ReconError> = Metadata::from_isbn(&sources, &isbn).await;
+
+        debug!("Response: {:#?}", res);
+        assert!(res.is_ok());
     }
 
-    // #[tokio::main]
-    // fn parses_metadata_from_isbn() {
-    //     use recon_metadata::Metadata;
-    //     use std::str::FromStr;
-    //
-    //     let isbn = isbn::Isbn::from_str("9781534431003").unwrap();
-    //     let resp = Metadata::from_isbn(&isbn).source(Source::default()).await;
-    //
-    //     assert!(resp.is_ok())
-    // }
+    #[tokio::test]
+    async fn parses_from_description() {
+        use super::Metadata;
+        use crate::recon::{ReconError, Source};
+
+        init_logger();
+
+        let description = "The way of kings by brandon sanderson";
+
+        let sources = [Source::GoogleBooks, Source::OpenLibrary];
+
+        let res: Result<Vec<Metadata>, ReconError> =
+            Metadata::from_description(&Source::GoogleBooks, &sources, &description).await;
+
+        debug!("Response: {:#?}", res);
+        assert!(res.is_ok());
+
+        let res: Result<Vec<Metadata>, ReconError> =
+            Metadata::from_description(&Source::OpenLibrary, &sources, &description).await;
+
+        debug!("Response: {:#?}", res);
+        assert!(res.is_ok());
+    }
 }

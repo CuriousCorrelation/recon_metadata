@@ -3,13 +3,17 @@ use std::{error, fmt};
 /// A list of database or search providers.
 /// Search providers are API to provide search functionality.
 /// This is the first API call in `recon_metadata`
-/// that will populate [`Metadata`].
+/// that will populate `Metadata`.
 /// Additional data will be provided by [`Source`].
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Source {
+    /// GoogleBooks API at <https://developers.google.com/books/docs/v1/using>
     GoogleBooks,
+    /// OpenLibrary API at <https://openlibrary.org/developers/api>
     OpenLibrary,
+    /// TBD
     Goodreads,
+    /// TBD
     Amazon,
 }
 
@@ -24,8 +28,8 @@ pub enum ReconError {
     /// A wrapper around [`reqwest::Error`]
     /// typically raised by `reqwest::get(url)`
     Connection(reqwest::Error),
-    /// A wrapper around [`isbn::IsbnError`]
-    /// typically raised by `isbn::Isbn::from_str(possible_isbn_str)`
+    /// A wrapper around [`isbn2::IsbnError`]
+    /// typically raised by `isbn2::Isbn::from_str(possible_isbn_str)`
     ISBNParse(isbn2::IsbnError),
     /// A wrapper around [`chrono::ParseError`]
     /// typically raised by `NaiveDate::parse_from_str(&string, &format_Str)`

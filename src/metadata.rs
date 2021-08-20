@@ -125,12 +125,10 @@ impl Metadata {
         }
     }
 
-    /// A simple `Isbn` search that'll use only one provider defined by
-    /// [`ReconSetup`].
-    /// An eclectic / diversified / exaustive search that'll use search provider
-    /// for initial information and fill in the blacks making expensive calls
-    /// but returning almost complete information about the book
-    /// provides by the sources defined by [`Source`].
+    /// Performs parallel ISBN search.
+    /// First arg requires a list of [`Source`],
+    /// second an `Isbn`.
+    /// Combines information for a complete and exasutive result [`Metadata`].
     pub async fn from_isbn(sources: &[Source], isbn: &Isbn) -> Result<Metadata, ReconError> {
         let mut metadata = Metadata::default();
 
@@ -148,6 +146,10 @@ impl Metadata {
         Ok(metadata)
     }
 
+    /// Performs parallel search on ISBNs provided by first argument.
+    /// Second argument describes sources to cross-examine.
+    /// Returns a list of [`Metadata`] that matches description
+    /// provided by the third argument.
     pub async fn from_description(
         search: &Source,
         sources: &[Source],
