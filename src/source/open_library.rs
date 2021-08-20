@@ -1,12 +1,14 @@
 use crate::metadata::Metadata;
 use crate::recon::ReconError;
 use crate::util::translater;
+use isbn2::Isbn;
 use log::debug;
 use serde::de;
 use serde::{Deserialize, Deserializer};
 use std::collections::HashMap;
 use std::fmt;
 use std::marker::PhantomData;
+use std::str::FromStr;
 
 #[derive(Debug)]
 pub struct OpenLibrary(Metadata);
@@ -200,18 +202,68 @@ impl OpenLibrary {
 
         debug!("Response: {:#?}", &response);
 
-        let metadata = response
-            .into_iter()
-            .map(|(_, v)| v.0)
-            .collect::<Vec<Metadata>>()
-            .remove(0);
+        let metadata = response.into_iter().map(|(_, v)| v.0).next();
 
-        Ok(metadata)
+        Ok(metadata.unwrap_or_default())
+    }
+
+    pub async fn from_description(description: &str) -> Result<Vec<Isbn>, ReconError> {
+        let req = format!(
+            "https://openlibrary.org/search.json?q={}",
+            urlencoding::encode(description)
+        );
+
+        debug!("Description: {:#?}", &description);
+        debug!("Request: {:#?}", &req);
+
+        #[derive(Deserialize, Debug)]
+        struct Docs {
+            docs: Vec<OLIsbn>,
+        }
+
+        #[derive(Deserialize, Debug)]
+        struct OLIsbn {
+            isbn: Option<Vec<String>>,
+        }
+
+        let response = reqwest::get(req)
+            .await
+            .map_err(ReconError::Connection)?
+            .json::<Docs>()
+            .await
+            .map_err(ReconError::Connection)?;
+
+        debug!("Response: {:#?}", &response);
+
+        let mut isbns = response
+            .docs
+            .iter()
+            .map(|h| h.isbn.as_ref().map(|v| v.get(0)))
+            .flatten()
+            .flatten()
+            .collect::<Vec<_>>();
+
+        isbns.truncate(3); // first 3 results
+
+        let mut isbn_list = Vec::new();
+
+        for isbn in isbns {
+            isbn_list.push(Isbn::from_str(isbn));
+        }
+
+        let isbn_list = isbn_list
+            .into_iter()
+            .filter(|isbn| isbn.is_ok())
+            .map(|isbn| isbn.unwrap())
+            .collect::<Vec<_>>();
+
+        Ok(isbn_list)
     }
 }
 
 #[cfg(test)]
 mod test {
+
     fn init_logger() {
         let _ = env_logger::builder().is_test(true).try_init();
     }
@@ -227,6 +279,19 @@ mod test {
 
         let isbn = Isbn::from_str("9781534431003").unwrap();
         let resp = OpenLibrary::from_isbn(&isbn).await;
+        debug!("Response: {:#?}", resp);
+        assert!(resp.is_ok())
+    }
+
+    #[tokio::test]
+    async fn parses_from_description() {
+        use super::OpenLibrary;
+        use log::debug;
+
+        init_logger();
+
+        let description = "This is how you lose the time war";
+        let resp = OpenLibrary::from_description(&description).await;
         debug!("Response: {:#?}", resp);
         assert!(resp.is_ok())
     }

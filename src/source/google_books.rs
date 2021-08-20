@@ -233,17 +233,12 @@ impl GoogleBooks {
 
         debug!("Response: {:#?}", &response);
 
-        let metadata = response
-            .items
-            .into_iter()
-            .map(|v| v.volume_info.0)
-            .collect::<Vec<Metadata>>()
-            .remove(0);
+        let metadata = response.items.into_iter().map(|v| v.volume_info.0).next();
 
-        Ok(metadata)
+        Ok(metadata.unwrap_or_default())
     }
 
-    pub async fn from_description(description: &str) -> Result<Vec<Metadata>, ReconError> {
+    pub async fn from_description(description: &str) -> Result<Vec<Isbn>, ReconError> {
         let req = format!(
             "https://www.googleapis.com/books/v1/volumes?q={}",
             urlencoding::encode(description)
@@ -279,23 +274,32 @@ impl GoogleBooks {
         debug!("Response: {:#?}", &response);
 
         // one ISBN from each book
-        let mut isbns = response
+        let mut isbns: Vec<&String> = response
             .items
-            .into_iter()
-            .map(|mut info| info.volume_info.industry_identifiers.remove(0))
-            .map(|mut h| h.remove("identifier"))
+            .iter()
+            .map(
+                |info| info.volume_info.industry_identifiers.get(0), // first ISBN found
+            )
+            .map(|h| h.map(|h| h.get("identifier")))
             .flatten()
-            .collect::<Vec<String>>();
+            .flatten()
+            .collect::<Vec<_>>();
 
         isbns.truncate(3); // first 3 results
 
-        let mut metadata_list = Vec::new();
+        let mut isbn_list = Vec::new();
 
         for isbn in isbns {
-            metadata_list.push(Self::from_isbn(&Isbn::from_str(&isbn).unwrap()).await?)
+            isbn_list.push(Isbn::from_str(isbn));
         }
 
-        Ok(metadata_list)
+        let isbn_list = isbn_list
+            .into_iter()
+            .filter(|isbn| isbn.is_ok())
+            .map(|isbn| isbn.unwrap())
+            .collect::<Vec<_>>();
+
+        Ok(isbn_list)
     }
 }
 
