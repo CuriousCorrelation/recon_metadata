@@ -3,6 +3,7 @@ use crate::{
     recon::ReconError, source::google_books::GoogleBooks, source::open_library::OpenLibrary,
 };
 use chrono::NaiveDate;
+use futures::future::join_all;
 use isbn2::{Isbn, Isbn10, Isbn13};
 use serde::ser::SerializeSeq;
 use serde::{Serialize, Serializer};
@@ -50,7 +51,7 @@ where
     let mut seq = serializer.serialize_seq(Some(dates.len()))?;
 
     for date in dates {
-        let s = format!("{}", date.format("%Y-%m-%d").to_string());
+        let s = date.format("%Y-%m-%d").to_string();
         seq.serialize_element(&s)?;
     }
     seq.end()
@@ -133,8 +134,15 @@ impl Metadata {
     pub async fn from_isbn(sources: &[Source], isbn: &Isbn) -> Result<Metadata, ReconError> {
         let mut metadata = Metadata::default();
 
-        for source in sources {
-            metadata = metadata + Self::isbn_from_source(source, isbn).await?;
+        let futures_list = sources
+            .iter()
+            .map(|s| Self::isbn_from_source(s, isbn))
+            .collect::<Vec<_>>();
+
+        let metadata_list = join_all(futures_list).await;
+
+        for m in metadata_list {
+            metadata = metadata + m?;
         }
 
         Ok(metadata)
@@ -147,13 +155,14 @@ impl Metadata {
     ) -> Result<Vec<Metadata>, ReconError> {
         let isbns: Vec<Isbn> = Self::description_from_source(search, description).await?;
 
-        let mut metadata_list: Vec<Metadata> = Vec::new();
+        let futures_list = isbns
+            .iter()
+            .map(|isbn| Self::from_isbn(sources, isbn))
+            .collect::<Vec<_>>();
 
-        for isbn in isbns {
-            metadata_list.push(Self::from_isbn(sources, &isbn).await?);
-        }
+        let metadata_list = join_all(futures_list).await;
 
-        Ok(metadata_list)
+        Ok(metadata_list.into_iter().flatten().collect())
     }
 }
 
