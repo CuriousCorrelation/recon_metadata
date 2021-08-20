@@ -102,11 +102,20 @@ impl Add for Metadata {
     }
 }
 
-/// A type synonym for `Result<Vec<Metadata>, ReconError>`
-pub type ReconResult = Result<Metadata, ReconError>;
-
 impl Metadata {
-    async fn from_source(source: &Source, isbn: &Isbn) -> ReconResult {
+    async fn description_from_source(
+        source: &Source,
+        description: &str,
+    ) -> Result<Vec<Isbn>, ReconError> {
+        match source {
+            Source::GoogleBooks => GoogleBooks::from_description(description).await,
+            Source::OpenLibrary => OpenLibrary::from_description(description).await,
+            Source::Amazon => unimplemented!(),
+            Source::Goodreads => unimplemented!(),
+        }
+    }
+
+    async fn isbn_from_source(source: &Source, isbn: &Isbn) -> Result<Metadata, ReconError> {
         match source {
             Source::GoogleBooks => GoogleBooks::from_isbn(isbn).await,
             Source::OpenLibrary => OpenLibrary::from_isbn(isbn).await,
@@ -121,14 +130,30 @@ impl Metadata {
     /// for initial information and fill in the blacks making expensive calls
     /// but returning almost complete information about the book
     /// provides by the sources defined by [`Source`].
-    pub async fn from_isbn(sources: &[Source], isbn: &Isbn) -> ReconResult {
+    pub async fn from_isbn(sources: &[Source], isbn: &Isbn) -> Result<Metadata, ReconError> {
         let mut metadata = Metadata::default();
 
         for source in sources {
-            metadata = metadata + Self::from_source(source, isbn).await?;
+            metadata = metadata + Self::isbn_from_source(source, isbn).await?;
         }
 
         Ok(metadata)
+    }
+
+    pub async fn from_description(
+        search: &Source,
+        sources: &[Source],
+        description: &str,
+    ) -> Result<Vec<Metadata>, ReconError> {
+        let isbns: Vec<Isbn> = Self::description_from_source(search, description).await?;
+
+        let mut metadata_list: Vec<Metadata> = Vec::new();
+
+        for isbn in isbns {
+            metadata_list.push(Self::from_isbn(sources, &isbn).await?);
+        }
+
+        Ok(metadata_list)
     }
 }
 
@@ -143,8 +168,7 @@ mod test {
     #[tokio::test]
     async fn parses_from_isbn() {
         use super::Metadata;
-        use crate::metadata::ReconResult;
-        use crate::recon::Source;
+        use crate::recon::{ReconError, Source};
         use isbn2::Isbn;
         use std::str::FromStr;
 
@@ -154,7 +178,31 @@ mod test {
 
         let sources = [Source::GoogleBooks, Source::OpenLibrary];
 
-        let res: ReconResult = Metadata::from_isbn(&sources, &isbn).await;
+        let res: Result<Metadata, ReconError> = Metadata::from_isbn(&sources, &isbn).await;
+
+        debug!("Response: {:#?}", res);
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn parses_from_description() {
+        use super::Metadata;
+        use crate::recon::{ReconError, Source};
+
+        init_logger();
+
+        let description = "This is how you lose the time war";
+
+        let sources = [Source::GoogleBooks, Source::OpenLibrary];
+
+        let res: Result<Vec<Metadata>, ReconError> =
+            Metadata::from_description(&Source::GoogleBooks, &sources, &description).await;
+
+        debug!("Response: {:#?}", res);
+        assert!(res.is_ok());
+
+        let res: Result<Vec<Metadata>, ReconError> =
+            Metadata::from_description(&Source::OpenLibrary, &sources, &description).await;
 
         debug!("Response: {:#?}", res);
         assert!(res.is_ok());
