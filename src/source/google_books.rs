@@ -206,7 +206,7 @@ impl<'de> Deserialize<'de> for GoogleBooks {
 impl GoogleBooks {
     pub async fn from_isbn(isbn: &isbn2::Isbn) -> Result<Metadata, ReconError> {
         let req = format!(
-            "https://www.googleapis.com/books/v1/volumes?q=isbn:{}&fields=items/volumeInfo(title,authors,publisher,publishedDate,language,industryIdentifiers,description,imageLinks)&maxResults=1",
+            "https://www.googleapis.com/books/v1/volumes?q=isbn:{}&fields=items/volumeInfo(title,authors,publisher,publishedDate,language,industryIdentifiers,description,categories,imageLinks)&maxResults=1",
             urlencoding::encode(&isbn.to_string())
         );
 
