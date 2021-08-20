@@ -35,8 +35,8 @@ pub(crate) fn empty() -> HashSet<String> {
     HashSet::new()
 }
 
-pub(crate) fn string(s: Option<&str>) -> HashSet<String> {
-    optional_to_hashset(s.map(|s| s.to_owned()))
+pub(crate) fn string(s: Option<String>) -> HashSet<String> {
+    optional_to_hashset(s)
 }
 
 pub(crate) fn hashmap(hashmap: Option<HashMap<&str, &str>>) -> HashSet<String> {
