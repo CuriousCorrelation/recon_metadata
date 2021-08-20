@@ -91,9 +91,8 @@ pub(crate) fn openlibrary_isbn10(
             .filter(|(k, _)| k.starts_with("isbn_10"))
             .map(|(_, v)| v)
             .flatten()
-            .map(
-                |s| Isbn10::from_str(s).unwrap(), // assuming ISBN is valid
-            )
+            .map(|s| Isbn10::from_str(s))
+            .flatten() // discarding `Err`
             .collect()
     }))
 }
@@ -107,9 +106,8 @@ pub(crate) fn openlibrary_isbn13(
             .filter(|(k, _)| k.starts_with("isbn_13"))
             .map(|(_, v)| v)
             .flatten()
-            .map(
-                |s| Isbn13::from_str(s).unwrap(), // assuming ISBN is valid
-            )
+            .map(|s| Isbn13::from_str(s))
+            .flatten() // discarding `Err`
             .collect()
     }))
 }
@@ -123,9 +121,8 @@ pub(crate) fn googlebooks_isbn10(
             .filter(|h| h.get("type") == Some("ISBN_10").as_ref())
             .map(|h| h.get("identifier"))
             .flatten()
-            .map(
-                |s| Isbn10::from_str(s).unwrap(), // assuming ISBN is valid
-            )
+            .map(|s| Isbn10::from_str(s))
+            .flatten() // discarding `Err`
             .collect()
     }))
 }
@@ -139,9 +136,8 @@ pub(crate) fn googlebooks_isbn13(
             .filter(|h| h.get("type") == Some("ISBN_13").as_ref())
             .map(|h| h.get("identifier"))
             .flatten()
-            .map(
-                |s| Isbn13::from_str(s).unwrap(), // assuming ISBN is valid
-            )
+            .map(|s| Isbn13::from_str(s))
+            .flatten() // discarding `Err`
             .collect()
     }))
 }
