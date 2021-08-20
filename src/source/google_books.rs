@@ -245,7 +245,7 @@ impl GoogleBooks {
     /// <https://developers.google.com/books/docs/v1/using>
     pub async fn from_description(description: &str) -> Result<Vec<Isbn>, ReconError> {
         let req = format!(
-            "https://www.googleapis.com/books/v1/volumes?q={}&fields=items/volumeInfo(industryIdentifiers)",
+            "https://www.googleapis.com/books/v1/volumes?q={}&fields=items/volumeInfo(industryIdentifiers)&maxResults=3",
             urlencoding::encode(description)
         );
 
