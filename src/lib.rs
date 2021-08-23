@@ -57,10 +57,15 @@ pub mod util;
 
 #[cfg(test)]
 mod tests {
+    use log::debug;
+
+    fn init_logger() {
+        let _ = env_logger::builder().is_test(true).try_init();
+    }
 
     #[tokio::test]
     async fn parses_from_isbn() {
-        use super::Metadata;
+        use super::metadata::Metadata;
         use crate::recon::{ReconError, Source};
         use isbn2::Isbn;
         use std::str::FromStr;
@@ -69,7 +74,7 @@ mod tests {
 
         let isbn = Isbn::from_str("9781534431003").unwrap();
 
-        let sources = [Source::GoogleBooks, Source::OpenLibrary];
+        let sources = [Source::GoogleBooks, Source::OpenLibrary, Source::Goodreads];
 
         let res: Result<Metadata, ReconError> = Metadata::from_isbn(&sources, &isbn).await;
 
@@ -79,23 +84,23 @@ mod tests {
 
     #[tokio::test]
     async fn parses_from_description() {
-        use super::Metadata;
+        use super::metadata::Metadata;
         use crate::recon::{ReconError, Source};
 
         init_logger();
 
         let description = "The way of kings by brandon sanderson";
 
-        let sources = [Source::GoogleBooks, Source::OpenLibrary];
+        let sources = [Source::GoogleBooks, Source::OpenLibrary, Source::Goodreads];
 
         let res: Result<Vec<Metadata>, ReconError> =
-            Metadata::from_description(&Source::GoogleBooks, &sources, &description).await;
+            Metadata::from_description(&Source::GoogleBooks, &sources, description).await;
 
         debug!("Response: {:#?}", res);
         assert!(res.is_ok());
 
         let res: Result<Vec<Metadata>, ReconError> =
-            Metadata::from_description(&Source::OpenLibrary, &sources, &description).await;
+            Metadata::from_description(&Source::OpenLibrary, &sources, description).await;
 
         debug!("Response: {:#?}", res);
         assert!(res.is_ok());
