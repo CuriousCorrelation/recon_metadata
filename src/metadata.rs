@@ -1,4 +1,5 @@
 use crate::recon::Source;
+use crate::source::goodreads::Goodreads;
 use crate::{
     recon::ReconError, source::google_books::GoogleBooks, source::open_library::OpenLibrary,
 };
@@ -112,7 +113,7 @@ impl Metadata {
             Source::GoogleBooks => GoogleBooks::from_description(description).await,
             Source::OpenLibrary => OpenLibrary::from_description(description).await,
             Source::Amazon => unimplemented!(),
-            Source::Goodreads => unimplemented!(),
+            Source::Goodreads => Goodreads::from_description(description).await,
         }
     }
 
@@ -121,7 +122,7 @@ impl Metadata {
             Source::GoogleBooks => GoogleBooks::from_isbn(isbn).await,
             Source::OpenLibrary => OpenLibrary::from_isbn(isbn).await,
             Source::Amazon => unimplemented!(),
-            Source::Goodreads => unimplemented!(),
+            Source::Goodreads => Goodreads::from_isbn(isbn).await,
         }
     }
 
