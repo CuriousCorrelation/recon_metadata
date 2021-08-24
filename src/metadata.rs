@@ -172,7 +172,7 @@ impl Metadata {
 
 #[cfg(test)]
 mod test {
-    use log::debug;
+    use log::info;
 
     fn init_logger() {
         let _ = env_logger::builder().is_test(true).try_init();
