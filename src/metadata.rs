@@ -1,8 +1,7 @@
 use crate::recon::Source;
 use crate::{
     recon::ReconError,
-    source::open_library::OpenLibrary,
-    source::{goodreads::Goodreads, google_books::GoogleBooks},
+    source::{google_books::GoogleBooks, open_library::OpenLibrary},
 };
 use chrono::NaiveDate;
 use futures::future::join_all;
@@ -114,7 +113,9 @@ impl Metadata {
             Source::GoogleBooks => GoogleBooks::from_description(description).await,
             Source::OpenLibrary => OpenLibrary::from_description(description).await,
             Source::Amazon => unimplemented!(),
-            Source::Goodreads => Goodreads::from_description(description).await,
+            Source::Goodreads => {
+                todo!("fix Goodreads::from_description(description).await, tendrill error")
+            }
         }
     }
 
@@ -123,7 +124,7 @@ impl Metadata {
             Source::GoogleBooks => GoogleBooks::from_isbn(isbn).await,
             Source::OpenLibrary => OpenLibrary::from_isbn(isbn).await,
             Source::Amazon => unimplemented!(),
-            Source::Goodreads => Goodreads::from_isbn(isbn).await,
+            Source::Goodreads => todo!("fix Goodreads::from_isbn(isbn).await, tendrill error"),
         }
     }
 
