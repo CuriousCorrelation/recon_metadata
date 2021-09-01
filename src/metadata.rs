@@ -11,6 +11,30 @@ use serde::{Serialize, Serializer};
 use std::collections::HashSet;
 use std::ops::Add;
 
+#[derive(Debug, Default, Serialize, PartialEq, Eq, Clone)]
+/// Information about type types of cover images according to their size
+pub struct CoverImage {
+    pub(crate) small_thumbnail: HashSet<String>,
+    pub(crate) thumbnail:       HashSet<String>,
+    pub(crate) small:           HashSet<String>,
+    pub(crate) medium:          HashSet<String>,
+    pub(crate) large:           HashSet<String>,
+    pub(crate) extra_large:     HashSet<String>,
+}
+
+impl CoverImage {
+    pub(crate) fn extend(&mut self, other: Self) -> &mut Self {
+        self.small_thumbnail.extend(other.small_thumbnail);
+        self.thumbnail.extend(other.thumbnail);
+        self.small.extend(other.small);
+        self.medium.extend(other.medium);
+        self.large.extend(other.large);
+        self.extra_large.extend(other.extra_large);
+
+        self
+    }
+}
+
 /// [`Metadata`] type contains information uniquely identify a book.
 /// [`Metadata`] contains the following:
 /// 1. ISBN-10 and/or ISBN-13
@@ -39,7 +63,7 @@ pub struct Metadata {
     pub(crate) publication_date: HashSet<NaiveDate>,
     pub(crate) language:         HashSet<String>,
     pub(crate) tag:              HashSet<String>,
-    pub(crate) cover_image:      HashSet<String>,
+    pub(crate) cover_image:      CoverImage,
 }
 
 fn serialize_hashset_naivedate<S>(

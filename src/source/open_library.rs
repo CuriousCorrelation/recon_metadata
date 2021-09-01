@@ -157,7 +157,7 @@ impl<'de> Deserialize<'de> for OpenLibrary {
                     publisher:        translater::vec_hashmap_field(publishers, "name"),
                     publication_date: translater::publication_date(publish_date),
                     language:         translater::empty(),
-                    cover_image:      translater::hashmap(cover),
+                    cover_image:      translater::openlibrary_cover_images(cover),
                     tag:              translater::vec_hashmap_field_split(subjects, "name"),
                 }))
             }

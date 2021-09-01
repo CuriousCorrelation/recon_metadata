@@ -1,6 +1,6 @@
 use std::{collections::HashSet, str::FromStr};
 
-use crate::metadata::Metadata;
+use crate::metadata::{CoverImage, Metadata};
 use crate::recon::ReconError;
 use isbn2::{Isbn, Isbn10, Isbn13};
 use log::debug;
@@ -73,11 +73,15 @@ impl Goodreads {
         for element in page.select(&cover_image_selector) {
             cover_image.insert(element.value().attr("src"));
         }
-        let cover_image = cover_image
-            .into_iter()
-            .flatten()
-            .map(|s| s.to_owned())
-            .collect();
+        // TODO: Fix fallback
+        let cover_image = CoverImage {
+            thumbnail:       HashSet::default(),
+            small_thumbnail: HashSet::default(),
+            small:           HashSet::default(),
+            medium:          HashSet::default(),
+            large:           HashSet::default(),
+            extra_large:     HashSet::default(),
+        };
 
         let page_count_selector = Selector::parse(r#"span[itemprop="numberOfPages"]"#).unwrap();
         let mut page_count = HashSet::new();

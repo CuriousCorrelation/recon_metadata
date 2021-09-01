@@ -176,7 +176,7 @@ impl<'de> Deserialize<'de> for GoogleBooks {
                     publication_date: translater::publication_date(published_date),
                     language:         translater::string(language),
                     tag:              translater::vec(categories),
-                    cover_image:      translater::hashmap(image_links),
+                    cover_image:      translater::googlebooks_cover_images(image_links),
                 }))
             }
         }

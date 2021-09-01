@@ -1,3 +1,4 @@
+use crate::metadata::CoverImage;
 use chrono::NaiveDate;
 use isbn2::{Isbn10, Isbn13};
 use std::{
@@ -37,12 +38,6 @@ pub(crate) fn empty() -> HashSet<String> {
 
 pub(crate) fn string(s: Option<String>) -> HashSet<String> {
     optional_to_hashset(s)
-}
-
-pub(crate) fn hashmap(hashmap: Option<HashMap<&str, &str>>) -> HashSet<String> {
-    hashset_fallback(
-        hashmap.map(|hashmap| hashmap.into_iter().map(|(_, v)| v.to_owned()).collect()),
-    )
 }
 
 pub(crate) fn vec(vec: Option<Vec<&str>>) -> HashSet<String> {
@@ -112,6 +107,56 @@ pub(crate) fn openlibrary_isbn13(
     }))
 }
 
+pub(crate) fn openlibrary_cover_images(hashmap: Option<HashMap<&str, &str>>) -> CoverImage {
+    hashmap
+        .map(|mut hashmap| {
+            let small_thumbnail = HashSet::default();
+            let thumbnail = HashSet::default();
+            let small = hashmap
+                .get_mut("small")
+                .map(|sm| -> HashSet<String> {
+                    let mut hs = HashSet::new();
+                    hs.insert(sm.to_owned());
+                    hs
+                })
+                .unwrap_or_default();
+            let medium = hashmap
+                .get_mut("medium")
+                .map(|sm| -> HashSet<String> {
+                    let mut hs = HashSet::new();
+                    hs.insert(sm.to_owned());
+                    hs
+                })
+                .unwrap_or_default();
+            let large = hashmap
+                .get_mut("large")
+                .map(|sm| -> HashSet<String> {
+                    let mut hs = HashSet::new();
+                    hs.insert(sm.to_owned());
+                    hs
+                })
+                .unwrap_or_default();
+            let extra_large = hashmap
+                .get_mut("extraLarge")
+                .map(|sm| -> HashSet<String> {
+                    let mut hs = HashSet::new();
+                    hs.insert(sm.to_owned());
+                    hs
+                })
+                .unwrap_or_default();
+
+            CoverImage {
+                small_thumbnail,
+                thumbnail,
+                small,
+                medium,
+                large,
+                extra_large,
+            }
+        })
+        .unwrap_or_default()
+}
+
 pub(crate) fn googlebooks_isbn10(
     hashmap_vec: &Option<Vec<HashMap<&str, &str>>>,
 ) -> HashSet<Isbn10> {
@@ -125,6 +170,70 @@ pub(crate) fn googlebooks_isbn10(
             .flatten() // discarding `Err`
             .collect()
     }))
+}
+
+pub(crate) fn googlebooks_cover_images(hashmap: Option<HashMap<&str, &str>>) -> CoverImage {
+    hashmap
+        .map(|mut hashmap| {
+            let small_thumbnail = hashmap
+                .get_mut("smallThumbnail")
+                .map(|sm| -> HashSet<String> {
+                    let mut hs = HashSet::new();
+                    hs.insert(sm.to_owned());
+                    hs
+                })
+                .unwrap_or_default();
+            let thumbnail = hashmap
+                .get_mut("thumbnail")
+                .map(|sm| -> HashSet<String> {
+                    let mut hs = HashSet::new();
+                    hs.insert(sm.to_owned());
+                    hs
+                })
+                .unwrap_or_default();
+            let small = hashmap
+                .get_mut("small")
+                .map(|sm| -> HashSet<String> {
+                    let mut hs = HashSet::new();
+                    hs.insert(sm.to_owned());
+                    hs
+                })
+                .unwrap_or_default();
+            let medium = hashmap
+                .get_mut("medium")
+                .map(|sm| -> HashSet<String> {
+                    let mut hs = HashSet::new();
+                    hs.insert(sm.to_owned());
+                    hs
+                })
+                .unwrap_or_default();
+            let large = hashmap
+                .get_mut("large")
+                .map(|sm| -> HashSet<String> {
+                    let mut hs = HashSet::new();
+                    hs.insert(sm.to_owned());
+                    hs
+                })
+                .unwrap_or_default();
+            let extra_large = hashmap
+                .get_mut("extraLarge")
+                .map(|sm| -> HashSet<String> {
+                    let mut hs = HashSet::new();
+                    hs.insert(sm.to_owned());
+                    hs
+                })
+                .unwrap_or_default();
+
+            CoverImage {
+                small_thumbnail,
+                thumbnail,
+                small,
+                medium,
+                large,
+                extra_large,
+            }
+        })
+        .unwrap_or_default()
 }
 
 pub(crate) fn googlebooks_isbn13(
