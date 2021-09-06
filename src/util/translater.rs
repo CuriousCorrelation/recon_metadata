@@ -1,3 +1,8 @@
+//! Translates API response data chunks into `Metadata` types
+
+/// Different book API responses are usually similar in shape so this module's job
+/// is to provide multipurpose functions that can be applied to a piece of `JSON` data
+/// provided by `serde` via `Source` module and translate them into `Metadata` type
 use crate::metadata::CoverImage;
 use chrono::NaiveDate;
 use isbn2::{Isbn10, Isbn13};
