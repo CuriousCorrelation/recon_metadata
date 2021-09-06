@@ -1,10 +1,6 @@
 use std::{error, fmt};
 
 /// A list of database or search providers.
-/// Search providers are API to provide search functionality.
-/// This is the first API call in `recon_metadata`
-/// that will populate `Metadata`.
-/// Additional data will be provided by [`Source`].
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Source {
     /// GoogleBooks API at <https://developers.google.com/books/docs/v1/using>
@@ -18,7 +14,7 @@ pub enum Source {
 }
 
 #[derive(Debug)]
-/// A wrapper around errors raised by parsing libraries used in `book_recon_metadata`
+/// A wrapper around errors raised by libraries used in `recon_metadata`
 pub enum ReconError {
     /// Message in case of unexpected API response.
     Message(String),
