@@ -31,7 +31,12 @@ async fn main() {
 ```
 
 ### Descriptive search
+Description search requires a primary source as well as a list of sources like `from_isbn`.
 
+`from_description` search will first look for `ISBN` numbers associated with the description string given.
+The sources will provide additional information about said `ISBN` numbers.
+
+This way the search results remain consistent and reduce the risk of recursive search and duplicate results.
 ```
 #[tokio::main]
 async fn main() {
@@ -57,9 +62,9 @@ pub mod recon;
 pub use recon::ReconError;
 pub use recon::Source;
 /// API and database sources
-pub mod source;
+pub(crate) mod source;
 /// Utility functions used for type conversion and field translation
-pub mod util;
+pub(crate) mod util;
 
 #[cfg(test)]
 mod tests {
