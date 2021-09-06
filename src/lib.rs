@@ -2,7 +2,6 @@
 #![warn(clippy::all)]
 #![warn(missing_debug_implementations)]
 #![warn(missing_debug_implementations)]
-#![feature(result_flattening)]
 
 /*!
 # Usage
