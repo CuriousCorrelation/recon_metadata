@@ -9,20 +9,24 @@
 
 ## Basic usage
 
+There are two types of search `recon_metadata` can perform
+
 ### ISBN search
 
 ```
 #[tokio::main]
 async fn main() {
-    use recon_metadata::Metadata;
+    use recon_metadata::{Metadata, Source, ReconError};
+    use isbn2::Isbn;
     use std::str::FromStr;
 
-    let isbn = isbn::Isbn::from_str("9781534431003").unwrap();
-    let resp = Metadata::from_isbn(&isbn)
-        .source(Source::default())
-        .await;
+    let isbn = Isbn::from_str("9781534431003").unwrap();
 
-    assert!(resp.is_ok())
+    let sources = [Source::GoogleBooks, Source::OpenLibrary];
+
+    let res: Result<Metadata, ReconError> = Metadata::from_isbn(&sources, &isbn).await;
+
+    assert!(res.is_ok());
 }
 ```
 
@@ -31,19 +35,18 @@ async fn main() {
 ```
 #[tokio::main]
 async fn main() {
-    use recon_metadata::Metadata;
-    use std::str::FromStr;
+    use recon_metadata::{Metadata, Source, ReconError};
 
     let description = "This is how you lose the time war";
-    let resp = Metadata::from_description(&description)
-        .search_provider(SearchProvider::default())
-        .source(Source::default())
-        .await;
 
-    assert!(resp.is_ok())
+    let sources = [Source::GoogleBooks, Source::OpenLibrary];
+
+    let res: Result<Vec<Metadata>, ReconError> =
+        Metadata::from_description(&Source::GoogleBooks, &sources, description).await;
+
+    assert!(res.is_ok());
 }
 ```
-
 */
 
 /// Book metadata returned by database and search APIs
