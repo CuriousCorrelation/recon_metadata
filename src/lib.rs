@@ -48,8 +48,11 @@ async fn main() {
 
 /// Book metadata returned by database and search APIs
 pub mod metadata;
+pub use metadata::Metadata;
 /// Types required by `recon_metadata`
 pub mod recon;
+pub use recon::ReconError;
+pub use recon::Source;
 /// API and database sources
 pub mod source;
 /// Utility functions used for type conversion and field translation
