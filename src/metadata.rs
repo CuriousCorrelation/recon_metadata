@@ -215,7 +215,7 @@ mod test {
 
         let isbn = Isbn::from_str("9781534431003").unwrap();
 
-        let sources = [Source::GoogleBooks, Source::OpenLibrary, Source::Goodreads];
+        let sources = [Source::GoogleBooks, Source::OpenLibrary];
 
         let res: Result<Metadata, ReconError> = Metadata::from_isbn(&sources, &isbn).await;
 
@@ -232,7 +232,7 @@ mod test {
 
         let description = "This is how you lose the time war";
 
-        let sources = [Source::GoogleBooks, Source::OpenLibrary, Source::Goodreads];
+        let sources = [Source::GoogleBooks, Source::OpenLibrary];
 
         let res: Result<Vec<Metadata>, ReconError> =
             Metadata::from_description(&Source::GoogleBooks, &sources, description).await;
