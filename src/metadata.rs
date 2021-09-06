@@ -11,9 +11,9 @@ use serde::{Serialize, Serializer};
 use std::collections::HashSet;
 use std::ops::Add;
 
-#[derive(Debug, Default, Serialize, PartialEq, Eq, Clone)]
 /// Information about type types of cover images according to their size
-pub struct CoverImage {
+#[derive(Debug, Default, Serialize, PartialEq, Eq, Clone)]
+pub(crate) struct CoverImage {
     pub(crate) small_thumbnail: HashSet<String>,
     pub(crate) thumbnail:       HashSet<String>,
     pub(crate) small:           HashSet<String>,
@@ -35,19 +35,20 @@ impl CoverImage {
     }
 }
 
-/// [`Metadata`] type contains information uniquely identify a book.
-/// [`Metadata`] contains the following:
-/// 1. ISBN-10 and/or ISBN-13
-/// 2. Title(s)
-/// 3. Author(s) [Can be "unknown"]
-/// 4. Description
-/// 5. Number of pages
+/// [`Metadata`] type contains information to uniquely identify a book.
 ///
-/// [`Metadata`] can also fetch some additional information like:
-/// 1. Publisher(s)
-/// 2. Publication Date(s)
-/// 3. Language
-/// 4. Cover image
+/// Contains one or multiple of the following:
+///  1. ISBN10
+///  2. ISBN13
+///  3. Title
+///  4. Author
+///  5. Description
+///  6. Page count
+///  7. Publisher
+///  8. Publication Date
+///  9. Language
+/// 10. Tag
+/// 11. Cover image
 #[derive(Debug, Default, Serialize)]
 pub struct Metadata {
     #[serde(serialize_with = "serialize_hashset_isbn10")]
