@@ -25,7 +25,7 @@ There are two types of search `recon_metadata` can perform
 
 #### ISBN search
 
-```
+``` rust
 #[tokio::main]
 async fn main() {
     use recon_metadata::{Metadata, Source, ReconError};
@@ -50,7 +50,7 @@ Description search requires a primary source as well as a list of sources like `
 The sources will provide additional information about said `ISBN` numbers.
 
 This way the search results remain consistent and reduce the risk of recursive search and duplicate results.
-```
+``` rust
 #[tokio::main]
 async fn main() {
     use recon_metadata::{Metadata, Source, ReconError};
