@@ -1,8 +1,10 @@
 [package]
 name = "recon_metadata"
 description = "A book details and metadata search library"
+author = "CuriousCorrelation"
 version = "0.1.0"
 edition = "2018"
+readme = "README.md"
 license = "MIT"
 license-file = "LICENSE"
 keywords = ["book", "search", "isbn", "api"]
