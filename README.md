@@ -14,6 +14,23 @@
 
 ### Add as dependency in `Cargo.toml`
 
+You can use it as a submodule or directly via `cargo`'s git option.
+
+#### `git`
+
+GitLab
+``` toml
+[dependencies]
+recon_metadata = { git = "https://gitlab.com/CuriousCorrelation/recon_metadata" }
+```
+
+GitHub
+``` toml
+[dependencies]
+recon_metadata = { git = "https://github.com/CuriousCorrelation/recon_metadata" }
+```
+
+#### Submodule
 ``` toml
 [dependencies]
 recon_metadata = { path = "recon_metadata" }
