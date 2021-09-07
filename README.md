@@ -18,13 +18,13 @@ You can use it as a submodule or directly via `cargo`'s git option.
 
 #### `git`
 
-GitLab
+##### GitLab
 ``` toml
 [dependencies]
 recon_metadata = { git = "https://gitlab.com/CuriousCorrelation/recon_metadata" }
 ```
 
-GitHub
+##### GitHub
 ``` toml
 [dependencies]
 recon_metadata = { git = "https://github.com/CuriousCorrelation/recon_metadata" }
