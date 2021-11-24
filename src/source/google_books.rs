@@ -337,7 +337,7 @@ mod test {
         init_logger();
 
         let description = "This is how you lose the time war";
-        let resp = GoogleBooks::from_description(&description).await;
+        let resp = GoogleBooks::from_description(description).await;
         debug!("Response: {:#?}", resp);
         assert!(resp.is_ok())
     }

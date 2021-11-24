@@ -296,7 +296,7 @@ mod test {
         init_logger();
 
         let description = "This is how you lose the time war";
-        let resp = OpenLibrary::from_description(&description).await;
+        let resp = OpenLibrary::from_description(description).await;
         debug!("Response: {:#?}", resp);
         assert!(resp.is_ok())
     }
