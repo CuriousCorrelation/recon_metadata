@@ -42,6 +42,8 @@ There are two types of search `recon_metadata` can perform
 
 #### ISBN search
 
+Requires `isbn2` library. Add `isbn2 = "0.4.0"` to `Cargo.toml`.
+
 ``` rust
 #[tokio::main]
 async fn main() {
